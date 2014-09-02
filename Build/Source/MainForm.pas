@@ -51,6 +51,7 @@ type
     chkDebug: TCheckBox;
     chkRelease: TCheckBox;
     chkRunTestsAsConsole: TCheckBox;
+    chkDryRun: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBuildClick(Sender: TObject);
@@ -64,6 +65,7 @@ type
     procedure mniCheckAllClick(Sender: TObject);
     procedure mniUncheckAllClick(Sender: TObject);
     procedure chkDebugClick(Sender: TObject);
+    procedure chkDryRunClick(Sender: TObject);
     procedure chkReleaseClick(Sender: TObject);
     procedure chkRunTestsAsConsoleClick(Sender: TObject);
   private
@@ -85,6 +87,11 @@ const
   CCompilerSettingsFileName = 'Build.Settings.Compilers.ini';
   CBuildSettingsFileName = 'Build.Settings.ini';
 
+procedure ScrollToLastLine(Memo: TMemo);
+begin
+  SendMessage(Memo.Handle, EM_LINESCROLL, 0,Memo.Lines.Count);
+end;
+
 procedure TfrmMain.FormCreate(Sender: TObject);
 var
   task: TBuildTask;
@@ -96,6 +103,7 @@ begin
   chkDebug.Checked := TBuildConfig.Debug in fBuildEngine.BuildConfigs;
   chkRelease.Checked := TBuildConfig.Release in fBuildEngine.BuildConfigs;
   chkPauseAfterEachStep.Checked := fBuildEngine.PauseAfterEachStep;
+  chkDryRun.Checked := fBuildEngine.DryRun;
   chkRunTests.Checked := fBuildEngine.RunTests;
   chkRunTestsAsConsole.Checked := fBuildEngine.RunTestsAsConsole;
   chkModifyDelphiRegistrySettings.Checked := fBuildEngine.ModifyDelphiRegistrySettings;
@@ -152,6 +160,8 @@ end;
 procedure TfrmMain.btnBuildClick(Sender: TObject);
 begin
   fBuildEngine.BuildAll;
+  mmoDetails.Lines.AddStrings(fBuildEngine.CommandLog);
+  ScrollToLastLine(mmoDetails);
 end;
 
 procedure TfrmMain.btnCleanClick(Sender: TObject);
@@ -190,6 +200,11 @@ begin
     fBuildEngine.BuildConfigs := fBuildEngine.BuildConfigs + [TBuildConfig.Debug]
   else
     fBuildEngine.BuildConfigs := fBuildEngine.BuildConfigs - [TBuildConfig.Debug];
+end;
+
+procedure TfrmMain.chkDryRunClick(Sender: TObject);
+begin
+  fBuildEngine.DryRun := chkDryRun.Checked;
 end;
 
 procedure TfrmMain.chkModifyDelphiRegistrySettingsClick(Sender: TObject);

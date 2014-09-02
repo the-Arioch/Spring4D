@@ -5,7 +5,7 @@ object frmMain: TfrmMain
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'Build Spring4d'
-  ClientHeight = 472
+  ClientHeight = 512
   ClientWidth = 513
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -338,19 +338,19 @@ object frmMain: TfrmMain
   OnDestroy = FormDestroy
   DesignSize = (
     513
-    472)
+    512)
   PixelsPerInch = 96
   TextHeight = 13
   object lblDetails: TLabel
     Left = 8
-    Top = 239
+    Top = 271
     Width = 36
     Height = 13
     Caption = '&Details:'
   end
   object btnBuild: TButton
     Left = 359
-    Top = 204
+    Top = 241
     Width = 146
     Height = 25
     Anchors = [akLeft, akTop, akRight]
@@ -361,10 +361,11 @@ object frmMain: TfrmMain
   end
   object mmoDetails: TMemo
     Left = 8
-    Top = 255
+    Top = 287
     Width = 497
-    Height = 184
+    Height = 192
     Anchors = [akLeft, akTop, akRight, akBottom]
+    Color = clBtnFace
     ReadOnly = True
     ScrollBars = ssBoth
     TabOrder = 5
@@ -373,7 +374,7 @@ object frmMain: TfrmMain
     Left = 8
     Top = 8
     Width = 345
-    Height = 225
+    Height = 257
     Caption = '&Targets'
     TabOrder = 0
     object lbTargets: TCheckListBox
@@ -381,7 +382,7 @@ object frmMain: TfrmMain
       Left = 10
       Top = 19
       Width = 325
-      Height = 200
+      Height = 228
       Margins.Left = 8
       Margins.Top = 4
       Margins.Right = 8
@@ -403,11 +404,12 @@ object frmMain: TfrmMain
       ParentFont = False
       PopupMenu = PopupMenu1
       TabOrder = 0
+      ExplicitHeight = 200
     end
   end
   object lblHomepage: TLinkLabel
     Left = 8
-    Top = 445
+    Top = 485
     Width = 113
     Height = 19
     Hint = 'Visit the home page'
@@ -417,18 +419,19 @@ object frmMain: TfrmMain
     TabOrder = 6
     UseVisualStyle = True
     OnLinkClick = lblHomepageLinkClick
+    ExplicitTop = 445
   end
   object grpBuildOptions: TGroupBox
     Left = 359
     Top = 78
     Width = 146
-    Height = 89
+    Height = 115
     Anchors = [akLeft, akTop, akRight]
     Caption = 'Build options'
     TabOrder = 2
     DesignSize = (
       146
-      89)
+      115)
     object chkRunTests: TCheckBox
       Left = 9
       Top = 21
@@ -470,10 +473,20 @@ object frmMain: TfrmMain
       TabOrder = 3
       OnClick = chkRunTestsAsConsoleClick
     end
+    object chkDryRun: TCheckBox
+      Left = 9
+      Top = 90
+      Width = 128
+      Height = 17
+      Anchors = [akLeft, akTop, akRight]
+      Caption = '&Dry run'
+      TabOrder = 4
+      OnClick = chkDryRunClick
+    end
   end
   object btnClean: TButton
     Left = 359
-    Top = 173
+    Top = 210
     Width = 146
     Height = 25
     Anchors = [akLeft, akTop, akRight]

@@ -123,7 +123,7 @@ type
 
   TBuildEngineBase = class
   private
-    fBuildConfigs: TBuildConfigs;
+    fDryRun: Boolean;
     fModifyDelphiRegistrySettings: Boolean;
     fOnlyShowInstalledVersions: Boolean;
     fPauseAfterEachStep: Boolean;
@@ -137,7 +137,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    property BuildConfigs: TBuildConfigs read fBuildConfigs write fBuildConfigs;
+    property DryRun: Boolean read fDryRun write fDryRun;
     property ModifyDelphiRegistrySettings: Boolean
       read fModifyDelphiRegistrySettings write fModifyDelphiRegistrySettings;
     property OnlyShowInstalledVersions: Boolean
@@ -153,14 +153,17 @@ type
 
   TBuildEngine = class(TBuildEngineBase)
   private
+    fBuildConfigs: TBuildConfigs;
+    fCommandLog: TStrings;
     fSourceBaseDir: string;
   protected
     procedure BuildTarget(const task: TBuildTask; buildConfig: TBuildConfig);
     procedure ExecuteCommandLine(const applicationName, commandLine: string;
-      var exitCode: Cardinal; const workingDir: string = ''); virtual;
+      var exitCode: Cardinal; const workingDir: string); virtual;
     procedure RemoveRelatedEntries(const baseDir: string; const entries: TStrings); virtual;
   public
     constructor Create;
+    destructor Destroy; override;
 
     procedure ConfigureCompilers(const fileName: string);
     procedure LoadSettings(const fileName: string);
@@ -168,6 +171,8 @@ type
 
     procedure BuildAll;
     procedure CleanUp;
+    property BuildConfigs: TBuildConfigs read fBuildConfigs write fBuildConfigs;
+    property CommandLog: TStrings read fCommandLog;
   end;
 
   ECommandLineException = class(Exception);
@@ -566,6 +571,15 @@ begin
   inherited Create;
 
   fBuildConfigs := [TBuildConfig.Debug, TBuildConfig.Release];
+  fCommandLog := TStringList.Create;
+end;
+
+destructor TBuildEngine.Destroy;
+begin
+  fCommandLog.Free;
+  fCommandLog := nil;
+
+  inherited Destroy;
 end;
 
 procedure TBuildEngine.ExecuteCommandLine(const applicationName, commandLine: string;
@@ -576,26 +590,31 @@ var
   processInfo: TProcessInformation;
   currentDir: PChar;
 begin
-  startupInfo := Default(TStartupInfo);
-  processInfo := Default(TProcessInformation);
-  startupInfo.cb := SizeOf(startupInfo);
-  localCommandLine := commandLine;
-  UniqueString(localCommandLine);
-  if workingDir <> '' then
-    currentDir := PChar(workingDir)
-  else
-    currentDir := nil;
-  if not CreateProcess(PChar(applicationName), PChar(localCommandLine),
-    nil, nil, True, 0, nil, currentDir, startupInfo, processInfo) then
+  CommandLog.Add(Format('Executing "%s %s" in "%s"', [applicationName, commandLine, workingDir]));
+  if not DryRun then
   begin
-    raise ECommandLineException.CreateResFmt(@SFailedToCreateProcess, [applicationName]);
-  end;
-  try
-    WaitForSingleObject(processInfo.hProcess, INFINITE);
-    GetExitCodeProcess(processInfo.hProcess, exitCode);
-  finally
-    CloseHandle(processInfo.hProcess);
-    CloseHandle(processInfo.hThread);
+    startupInfo := Default(TStartupInfo);
+    processInfo := Default(TProcessInformation);
+    startupInfo.cb := SizeOf(startupInfo);
+    localCommandLine := commandLine;
+    UniqueString(localCommandLine);
+    if workingDir <> '' then
+      currentDir := PChar(workingDir)
+    else
+      currentDir := nil;
+    if not CreateProcess(PChar(applicationName), PChar(localCommandLine),
+      nil, nil, True, 0, nil, currentDir, startupInfo, processInfo) then
+    begin
+      raise ECommandLineException.CreateResFmt(@SFailedToCreateProcess, [applicationName]);
+    end;
+    try
+      WaitForSingleObject(processInfo.hProcess, INFINITE);
+      GetExitCodeProcess(processInfo.hProcess, exitCode);
+      CommandLog.Add(Format('Exitcode %d', [exitCode]));
+    finally
+      CloseHandle(processInfo.hProcess);
+      CloseHandle(processInfo.hThread);
+    end;
   end;
 end;
 
@@ -627,7 +646,7 @@ begin
 
   target := task.Compiler;
 
-  projectPath := ExtractFilePath(ParamStr(0));
+  projectPath := TPath.GetDirectoryName(ParamStr(0));
   configName := ConfigNames[buildConfig];
 
   RemoveRelatedEntries(projectPath, target.LibraryPaths);
@@ -636,7 +655,7 @@ begin
     RemoveRelatedEntries(projectPath, target.DebugDCUPaths);
 
   if TPath.IsRelativePath(task.UnitOutputPath) then
-    unitOutputPath := projectPath + task.UnitOutputPath
+    unitOutputPath := { projectPath + } task.UnitOutputPath // see if msbuild can handle relative paths
   else
     unitOutputPath := task.UnitOutputPath;
   unitOutputPath := StringReplace(unitOutputPath, '$(Config)', configName, [rfIgnoreCase, rfReplaceAll]);
@@ -647,7 +666,7 @@ begin
   target.BrowsingPaths.AddIfNotContains(SourcePaths);
   if buildConfig = TBuildConfig.Debug then
     target.DebugDCUPaths.AddIfNotContains(unitOutputPath);
-  if fModifyDelphiRegistrySettings then
+  if ModifyDelphiRegistrySettings then
     target.SaveOptions;
 
   cmdFileName := IncludeTrailingPathDelimiter(TEnvironment.GetFolderPath(sfSystem)) + 'cmd.exe';
@@ -660,7 +679,7 @@ begin
       rsVars, projectName, configName, targetPlatform, unitOutputPath, defines]);
     if fPauseAfterEachStep then
       commandLine := commandLine + SPause;
-    ExecuteCommandLine(cmdFileName, commandLine, exitCode);
+    ExecuteCommandLine(cmdFileName, commandLine, exitCode, projectPath);
     if exitCode <> 0 then
       raise EBuildException.CreateResFmt(@SBuildFailed, [projectName]);
   end;
@@ -682,12 +701,14 @@ var
   cmdFileName: string;
   commandLine: string;
   exitCode: Cardinal;
+  workingDir: string;
 begin
   cmdFileName := IncludeTrailingPathDelimiter(TEnvironment.GetFolderPath(sfSystem)) + 'cmd.exe';
   commandLine := '/C Clean.bat';
   if PauseAfterEachStep then
     commandLine := commandLine + SPause;
-  ExecuteCommandLine(cmdFileName, commandLine, exitCode);
+  workingDir := TPath.GetDirectoryName(ParamStr(0));
+  ExecuteCommandLine(cmdFileName, commandLine, exitCode, workingDir);
 end;
 
 procedure TBuildEngine.ConfigureCompilers(const fileName: string);
@@ -747,6 +768,7 @@ begin
     for i := 0 to fSourcePaths.Count - 1 do
       fSourcePaths[i] := IncludeTrailingPathDelimiter(fSourceBaseDir) + fSourcePaths[i];
     selectedTasks.DelimitedText := iniFile.ReadString('Globals', 'SelectedTasks', '');
+    fDryRun := iniFile.ReadBool('Globals', 'DryRun', False);
     fPauseAfterEachStep := iniFile.ReadBool('Globals', 'PauseAfterEachStep', False);
     fRunTests := iniFile.ReadBool('Globals', 'RunTests', False);
     fRunTestsAsConsole := iniFile.ReadBool('Globals', 'RunTestsAsConsole', False);
@@ -812,10 +834,11 @@ begin
     end;
     iniFile.WriteString('Globals', 'Config', config);
     iniFile.WriteString('Globals', 'SelectedTasks', selectedTasks.DelimitedText);
+    iniFile.WriteBool('Globals', 'DryRun', fDryRun);
     iniFile.WriteBool('Globals', 'PauseAfterEachStep', fPauseAfterEachStep);
     iniFile.WriteBool('Globals', 'RunTests', fRunTests);
     iniFile.WriteBool('Globals', 'RunTestsAsConsole', fRunTestsAsConsole);
-    iniFile.WriteBool('Globals', 'ModifyDelphiRegistrySettings', fModifyDelphiRegistrySettings);
+    iniFile.WriteBool('Globals', 'ModifyDelphiRegistrySettings', ModifyDelphiRegistrySettings);
   finally
     selectedTasks.Free;
     iniFile.Free;
