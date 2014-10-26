@@ -22,6 +22,8 @@
 {                                                                           }
 {***************************************************************************}
 
+{$i Spring.inc}
+
 unit MainForm;
 
 interface
@@ -36,7 +38,7 @@ type
     mmoDetails: TMemo;
     lblDetails: TLabel;
     grpTargets: TGroupBox;
-    lbTargets: TCheckListBox;
+    TargetsListBox: TCheckListBox;
     lblHomepage: TLinkLabel;
     BalloonHint1: TBalloonHint;
     btnClean: TButton;
@@ -44,7 +46,7 @@ type
     grpBuildOptions: TGroupBox;
     chkModifyDelphiRegistrySettings: TCheckBox;
     chkPauseAfterEachStep: TCheckBox;
-    PopupMenu1: TPopupMenu;
+    TargetsPopupMenu: TPopupMenu;
     mniCheckAll: TMenuItem;
     mniUncheckAll: TMenuItem;
     grpBuildConfigurations: TGroupBox;
@@ -52,11 +54,17 @@ type
     chkRelease: TCheckBox;
     chkRunTestsAsConsole: TCheckBox;
     chkDryRun: TCheckBox;
+    InvertSelectionMenuItem: TMenuItem;
+    N2: TMenuItem;
+    CheckOnlyMobilePlatforms: TMenuItem;
+    CheckOnlyNonMobilePlatforms: TMenuItem;
+    CheckOnlyOSXMenuItem: TMenuItem;
+    CheckOnlyWindowsMenuItem: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBuildClick(Sender: TObject);
     procedure btnCleanClick(Sender: TObject);
-    procedure lbTargetsClickCheck(Sender: TObject);
+    procedure TargetsListBoxClickCheck(Sender: TObject);
     procedure lblHomepageLinkClick(Sender: TObject; const Link: string;
       LinkType: TSysLinkType);
     procedure chkRunTestsClick(Sender: TObject);
@@ -68,6 +76,14 @@ type
     procedure chkDryRunClick(Sender: TObject);
     procedure chkReleaseClick(Sender: TObject);
     procedure chkRunTestsAsConsoleClick(Sender: TObject);
+    procedure InvertSelectionMenuItemClick(Sender: TObject);
+    procedure CheckOnlyMobilePlatformsClick(Sender: TObject);
+    procedure CheckOnlyNonMobilePlatformsClick(Sender: TObject);
+    procedure CheckOnlyOSXMenuItemClick(Sender: TObject);
+    procedure CheckOnlyWindowsMenuItemClick(Sender: TObject);
+  protected
+    procedure SyncBuildTasksFromTargetsListBox; virtual;
+    procedure CheckOnlyTargetsListBoxBy(const CompilerFunction: TFunc<TCompilerTarget, Boolean>); virtual;
   private
     fBuildEngine: TBuildEngine;
   end;
@@ -108,14 +124,14 @@ begin
   chkRunTestsAsConsole.Checked := fBuildEngine.RunTestsAsConsole;
   chkModifyDelphiRegistrySettings.Checked := fBuildEngine.ModifyDelphiRegistrySettings;
 
-  lbTargets.Clear;
+  TargetsListBox.Clear;
   for task in fBuildEngine.Tasks do
   begin
     if fBuildEngine.OnlyShowInstalledVersions and not task.CanBuild then
       Continue;
-    index := lbTargets.Items.AddObject(task.Name, task);
-    lbTargets.ItemEnabled[index] := task.CanBuild;
-    lbTargets.Checked[index] := fBuildEngine.SelectedTasks.Contains(task);
+    index := TargetsListBox.Items.AddObject(task.Name, task);
+    TargetsListBox.ItemEnabled[index] := task.CanBuild;
+    TargetsListBox.Checked[index] := fBuildEngine.SelectedTasks.Contains(task);
   end;
 
   if FileExists('Build.md') then
@@ -134,27 +150,15 @@ begin
   ShellExecute(Handle, 'open', PChar(Link), nil, nil, SW_NORMAL);
 end;
 
-procedure TfrmMain.lbTargetsClickCheck(Sender: TObject);
-var
-  task: TBuildTask;
-  i: Integer;
+procedure TfrmMain.TargetsListBoxClickCheck(Sender: TObject);
 begin
-  fBuildEngine.SelectedTasks.Clear;
-  for i := 0 to lbTargets.Count - 1 do
-  begin
-    if lbTargets.Checked[i] then
-    begin
-      task := TBuildTask(lbTargets.Items.Objects[i]);
-      fBuildEngine.SelectedTasks.Add(task);
-    end;
-  end;
-  btnBuild.Enabled := not fBuildEngine.SelectedTasks.IsEmpty;
+  SyncBuildTasksFromTargetsListBox();
 end;
 
 procedure TfrmMain.mniUncheckAllClick(Sender: TObject);
 begin
-  lbTargets.CheckAll(cbUnchecked);
-  lbTargetsClickCheck(lbTargets);
+  TargetsListBox.CheckAll(cbUnchecked);
+  SyncBuildTasksFromTargetsListBox();
 end;
 
 procedure TfrmMain.btnBuildClick(Sender: TObject);
@@ -169,10 +173,60 @@ begin
   fBuildEngine.CleanUp;
 end;
 
+procedure TfrmMain.CheckOnlyMobilePlatformsClick(Sender: TObject);
+begin
+  CheckOnlyTargetsListBoxBy(function (compiler: TCompilerTarget): Boolean
+  begin
+    Result := compiler.IsMobilePlatform;
+  end
+  );
+end;
+
+procedure TfrmMain.CheckOnlyNonMobilePlatformsClick(Sender: TObject);
+begin
+  CheckOnlyTargetsListBoxBy(function (compiler: TCompilerTarget): Boolean
+  begin
+    Result := not compiler.IsMobilePlatform;
+  end
+  );
+end;
+
+procedure TfrmMain.CheckOnlyOSXMenuItemClick(Sender: TObject);
+begin
+  CheckOnlyTargetsListBoxBy(function (compiler: TCompilerTarget): Boolean
+  begin
+    Result := compiler.IsOsxPlatform;
+  end
+  );
+end;
+
+procedure TfrmMain.CheckOnlyTargetsListBoxBy(
+  const CompilerFunction: TFunc<TCompilerTarget, Boolean>);
+var
+  index: Integer;
+  task: TBuildTask;
+begin
+  for index := 0 to TargetsListBox.Count - 1 do
+  begin
+    task := TBuildTask(TargetsListBox.Items.Objects[index]);
+    TargetsListBox.Checked[index] := CompilerFunction(task.Compiler);
+  end;
+  SyncBuildTasksFromTargetsListBox();
+end;
+
+procedure TfrmMain.CheckOnlyWindowsMenuItemClick(Sender: TObject);
+begin
+  CheckOnlyTargetsListBoxBy(function (compiler: TCompilerTarget): Boolean
+  begin
+    Result := compiler.IsWindowsPlatform;
+  end
+  );
+end;
+
 procedure TfrmMain.mniCheckAllClick(Sender: TObject);
 begin
-  lbTargets.CheckAll(cbChecked, False, False);
-  lbTargetsClickCheck(lbTargets);
+  TargetsListBox.CheckAll(cbChecked, False, False);
+  SyncBuildTasksFromTargetsListBox();
 end;
 
 procedure TfrmMain.chkReleaseClick(Sender: TObject);
@@ -215,6 +269,32 @@ end;
 procedure TfrmMain.chkPauseAfterEachStepClick(Sender: TObject);
 begin
   fBuildEngine.PauseAfterEachStep := chkPauseAfterEachStep.Checked;
+end;
+
+procedure TfrmMain.InvertSelectionMenuItemClick(Sender: TObject);
+begin
+  CheckOnlyTargetsListBoxBy(function (compiler: TCompilerTarget): Boolean
+  begin
+    Result := not compiler.IsMobilePlatform;
+  end
+  );
+end;
+
+procedure TfrmMain.SyncBuildTasksFromTargetsListBox;
+var
+  task: TBuildTask;
+  i: Integer;
+begin
+  fBuildEngine.SelectedTasks.Clear();
+  for i := 0 to TargetsListBox.Count - 1 do
+  begin
+    if TargetsListBox.Checked[i] then
+    begin
+      task := TBuildTask(TargetsListBox.Items.Objects[i]);
+      fBuildEngine.SelectedTasks.Add(task);
+    end;
+  end;
+  btnBuild.Enabled := not fBuildEngine.SelectedTasks.IsEmpty;
 end;
 
 end.

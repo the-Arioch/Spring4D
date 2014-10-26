@@ -22,6 +22,8 @@
 {                                                                           }
 {***************************************************************************}
 
+{$i Spring.inc}
+
 unit BuildEngine;
 
 interface
@@ -68,6 +70,16 @@ type
     property TypeName: string read fTypeName;
   end;
 
+  // Spelling is exactly as used in *.dproj files for "Platform" and $(Platform) entries.
+  TKnownPlatforms = (
+    Win32,
+    Win64,
+    OSX32,
+    iOSSimulator,
+    iOSDevice,
+    Android
+  );
+
   TCompilerTarget = class(TCompilerTargetBase)
   private
     type
@@ -91,18 +103,26 @@ type
   protected
     procedure EnsureOpenKey(const key: string; canCreate: Boolean = False);
     function GetDccFileName(const targetPlatform: string): string;
+    function GetIsMobilePlatform: Boolean; virtual;
+    function GetIsOsxPlatform: Boolean; virtual;
+    function GetIsWindowsPlatform: Boolean; virtual;
+    function GetKnownPlatform: TKnownPlatforms; virtual;
     function IdeAndDccExist(const bdsFilePath, targetPlatform: string): Boolean;
     procedure LoadEnvironmentVariables(const environmentVariables: TStrings);
     procedure SaveEnvironmentVariables(const environmentVariables: TStrings);
 
     property Keys: TKeys read fKeys;
     property Names: TNames read fNames;
+    property KnownPlatform: TKnownPlatforms read GetKnownPlatform;
   public
     constructor Create(const typeName: string; const properties: TStrings); overload;
     destructor Destroy; override;
 
     procedure LoadOptions;
     procedure SaveOptions;
+    property IsMobilePlatform: Boolean read GetIsMobilePlatform;
+    property IsOsxPlatform: Boolean read GetIsOsxPlatform;
+    property IsWindowsPlatform: Boolean read GetIsWindowsPlatform;
   end;
 
   TBuildTask = class
@@ -193,17 +213,6 @@ uses
   Spring,
   Spring.Utils;
 
-
-type
-  // Spelling is exactly as used in *.dproj files for "Platform" and $(Platform) entries.
-  TKnownPlatforms = (
-    Win32,
-    Win64,
-    OSX32,
-    iOSSimulator,
-    iOSDevice,
-    Android
-  );
 
 const
   SPause = ' pause';
@@ -463,6 +472,38 @@ const // luckily, the compiler file names have not changed over the Delphi versi
   );
 var
   knownPlatform: TKnownPlatforms;
+begin
+  knownPlatform := Self.KnownPlatform;
+  Result := CCommandLineCompilers[knownPlatform];
+end;
+
+function TCompilerTarget.GetIsMobilePlatform: Boolean;
+var
+  knownPlatform: TKnownPlatforms;
+begin
+  knownPlatform := Self.KnownPlatform;
+  Result := knownPlatform in [TKnownPlatforms.iOSSimulator, TKnownPlatforms.iOSDevice, TKnownPlatforms.Android];
+end;
+
+function TCompilerTarget.GetIsOsxPlatform: Boolean;
+var
+  knownPlatform: TKnownPlatforms;
+begin
+  knownPlatform := Self.KnownPlatform;
+  Result := knownPlatform = TKnownPlatforms.OSX32;
+end;
+
+function TCompilerTarget.GetIsWindowsPlatform: Boolean;
+var
+  knownPlatform: TKnownPlatforms;
+begin
+  knownPlatform := Self.KnownPlatform;
+  Result := knownPlatform in [TKnownPlatforms.Win32, TKnownPlatforms.Win64];
+end;
+
+function TCompilerTarget.GetKnownPlatform: TKnownPlatforms;
+var
+  knownPlatform: TKnownPlatforms;
   knownPlatformName: string;
 begin
   for knownPlatform := Low(TKnownPlatforms) to High(TKnownPlatforms) do
@@ -470,7 +511,7 @@ begin
     knownPlatformName := TEnum.GetName(knownPlatform);
     if SameText(knownPlatformName, targetPlatform) then
     begin
-      Result := CCommandLineCompilers[knownPlatform];
+      Result := knownPlatform;
       Exit;
     end;
   end;
@@ -686,7 +727,7 @@ begin
 
   if fRunTests then
   begin
-    if (targetPlatform = 'Win32') or (targetPlatform = 'Win64') then
+    if target.IsWindowsPlatform then
     begin
       commandLine := Format('%0:s\Tests\Bin\%1:s\Spring.Tests.exe', [
         ExcludeTrailingPathDelimiter(projectPath),

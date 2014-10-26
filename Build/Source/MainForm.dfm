@@ -377,7 +377,7 @@ object frmMain: TfrmMain
     Height = 257
     Caption = '&Targets'
     TabOrder = 0
-    object lbTargets: TCheckListBox
+    object TargetsListBox: TCheckListBox
       AlignWithMargins = True
       Left = 10
       Top = 19
@@ -402,7 +402,7 @@ object frmMain: TfrmMain
         'RAD Studio XE2 (Win32)'
         'RAD Studio XE2 (Win64)')
       ParentFont = False
-      PopupMenu = PopupMenu1
+      PopupMenu = TargetsPopupMenu
       TabOrder = 0
       ExplicitHeight = 200
     end
@@ -524,7 +524,7 @@ object frmMain: TfrmMain
     Left = 32
     Top = 304
   end
-  object PopupMenu1: TPopupMenu
+  object TargetsPopupMenu: TPopupMenu
     Left = 112
     Top = 304
     object mniCheckAll: TMenuItem
@@ -534,6 +534,29 @@ object frmMain: TfrmMain
     object mniUncheckAll: TMenuItem
       Caption = 'Uncheck all'
       OnClick = mniUncheckAllClick
+    end
+    object InvertSelectionMenuItem: TMenuItem
+      Caption = 'Invert selection'
+      OnClick = InvertSelectionMenuItemClick
+    end
+    object N2: TMenuItem
+      Caption = '-'
+    end
+    object CheckOnlyMobilePlatforms: TMenuItem
+      Caption = 'Check only Mobile'
+      OnClick = CheckOnlyMobilePlatformsClick
+    end
+    object CheckOnlyNonMobilePlatforms: TMenuItem
+      Caption = 'Check only non-Mobile'
+      OnClick = CheckOnlyNonMobilePlatformsClick
+    end
+    object CheckOnlyOSXMenuItem: TMenuItem
+      Caption = 'Check only OS X'
+      OnClick = CheckOnlyOSXMenuItemClick
+    end
+    object CheckOnlyWindowsMenuItem: TMenuItem
+      Caption = 'Check only Windows'
+      OnClick = CheckOnlyWindowsMenuItemClick
     end
   end
 end
