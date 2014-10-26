@@ -22,9 +22,9 @@
 {                                                                           }
 {***************************************************************************}
 
-unit Spring.Collections.Base;
-
 {$I Spring.inc}
+
+unit Spring.Collections.Base;
 
 interface
 
@@ -71,6 +71,10 @@ type
   TEnumerableBase = class abstract(TInterfacedObject, IInterface,
     IElementType, ICountable, IEnumerable)
   private
+{$IFNDEF AUTOREFCOUNT}{$IFNDEF DELPHIXE7_UP}
+    const objDestroyingFlag = Integer($80000000);
+    function GetRefCount: Integer; inline;
+{$ENDIF}{$ENDIF}
     function GetEnumeratorNonGeneric: IEnumerator; virtual; abstract;
     function IEnumerable.GetEnumerator = GetEnumeratorNonGeneric;
   protected
@@ -86,6 +90,10 @@ type
     function _Release: Integer; virtual; stdcall;
   {$ENDREGION}
   public
+{$IFNDEF AUTOREFCOUNT}{$IFNDEF DELPHIXE7_UP}
+    procedure BeforeDestruction; override;
+{$ENDIF}{$ENDIF}
+
     function AsObject: TObject;
 
     function GetEnumerator: IEnumerator;
@@ -93,6 +101,9 @@ type
     property Count: Integer read GetCount;
     property ElementType: PTypeInfo read GetElementType;
     property IsEmpty: Boolean read GetIsEmpty;
+{$IFNDEF AUTOREFCOUNT}{$IFNDEF DELPHIXE7_UP}
+    property RefCount: Integer read GetRefCount;
+{$ENDIF}{$ENDIF}
   end;
 
   ///	<summary>
@@ -219,8 +230,8 @@ type
     procedure Changed(const item: T; action: TCollectionChangedAction); virtual;
   public
     constructor Create; override;
-    constructor Create(const collection: array of T); overload;
-    constructor Create(const collection: IEnumerable<T>); overload;
+    constructor Create(const collection: array of T); overload; virtual;
+    constructor Create(const collection: IEnumerable<T>); overload; virtual;
 
     procedure Add(const item: T);
     procedure AddRange(const collection: array of T); overload; virtual;
@@ -316,8 +327,10 @@ type
   {$HINTS ON}
   protected
   {$REGION 'Property Accessors'}
+    function GetCount: Integer; override;
     function GetCapacity: Integer; virtual; abstract;
     function GetItem(index: Integer): T; virtual; abstract;
+    procedure SetCount(count: Integer); virtual;
     procedure SetCapacity(value: Integer); virtual; abstract;
     procedure SetItem(index: Integer; const value: T); virtual; abstract;
   {$ENDREGION}
@@ -374,6 +387,7 @@ type
     procedure TrimExcess;
 
     property Capacity: Integer read GetCapacity write SetCapacity;
+    property Count: Integer read GetCount write SetCount;
     property Items[index: Integer]: T read GetItem write SetItem; default;
   end;
 
@@ -424,6 +438,14 @@ begin
   Result := Self;
 end;
 
+{$IFNDEF AUTOREFCOUNT}{$IFNDEF DELPHIXE7_UP}
+procedure TEnumerableBase.BeforeDestruction;
+begin
+  inherited;
+  FRefCount := objDestroyingFlag;
+end;
+{$ENDIF}{$ENDIF}
+
 function TEnumerableBase.GetCount: Integer;
 var
   enumerator: IEnumerator;
@@ -446,6 +468,13 @@ begin
   enumerator := GetEnumerator;
   Result := not enumerator.MoveNext;
 end;
+
+{$IFNDEF AUTOREFCOUNT}{$IFNDEF DELPHIXE7_UP}
+function TEnumerableBase.GetRefCount: Integer;
+begin
+  Result := FRefCount and not objDestroyingFlag;
+end;
+{$ENDIF}{$ENDIF}
 
 function TEnumerableBase.QueryInterface(const IID: TGUID; out Obj): HResult;
 begin
@@ -1411,13 +1440,15 @@ end;
 procedure TMapBase<TKey, T>.KeyChanged(const Item: TKey;
   Action: TCollectionChangedAction);
 begin
-  fOnKeyChanged.Invoke(Self, Item, Action)
+  if Assigned(fOnKeyChanged) then
+    fOnKeyChanged.Invoke(Self, Item, Action)
 end;
 
 procedure TMapBase<TKey, T>.ValueChanged(const Item: T;
   Action: TCollectionChangedAction);
 begin
-  fOnValueChanged.Invoke(Self, Item, Action)
+  if Assigned(fOnValueChanged) then
+    fOnValueChanged.Invoke(Self, Item, Action)
 end;
 
 {$ENDREGION}
@@ -1485,6 +1516,11 @@ begin
     Result := Items[0]
   else
     Result := defaultValue;
+end;
+
+function TListBase<T>.GetCount: Integer;
+begin
+  Result := inherited;
 end;
 
 function TListBase<T>.IndexOf(const item: T): Integer;
@@ -1621,6 +1657,11 @@ end;
 procedure TListBase<T>.Reverse;
 begin
   Reverse(0, Count);
+end;
+
+procedure TListBase<T>.SetCount(count: Integer);
+begin
+  raise ENotSupportedException.Create('SetCount');
 end;
 
 function TListBase<T>.Single: T;

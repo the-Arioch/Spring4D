@@ -22,13 +22,13 @@
 {                                                                           }
 {***************************************************************************}
 
+{$I Spring.inc}
+
 ///	<summary>
 ///	  Declares the fundamental interfaces for the
 ///	  <see href="http://spring4d.org">Spring4D</see> Framework.
 ///	</summary>
 unit Spring;
-
-{$I Spring.inc}
 
 interface
 
@@ -87,10 +87,70 @@ type
 
 
   {$REGION 'Interfaces'}
+
+  /// <summary>
+  ///   Supports cloning, which creates a new instance of a class with the same
+  ///   value as an existing instance.
+  /// </summary>
+  IClonable = interface(IInvokable)
+    ['{B6BC3795-624B-434F-BB19-6E8F55149D0A}']
+    /// <summary>
+    ///   Creates a new object that is a copy of the current instance.
+    /// </summary>
+    /// <returns>
+    ///   A new object that is a copy of this instance.
+    /// </returns>
+    function Clone: TObject;
+  end;
+
+  /// <summary>
+  ///   Defines a generalized type-specific comparison method that a class
+  ///   implements to order or sort its instances.
+  /// </summary>
   IComparable = interface(IInvokable)
     ['{7F0E25C8-50D7-4CF0-AB74-1913EBD3EE42}']
+    /// <summary>
+    ///   Compares the current instance with another object of the same type
+    ///   and returns an integer that indicates whether the current instance
+    ///   precedes, follows, or occurs in the same position in the sort order
+    ///   as the other object.
+    /// </summary>
+    /// <param name="obj">
+    ///   An object to compare with this instance.
+    /// </param>
+    /// <returns>
+    ///   <para>
+    ///     A value that indicates the relative order of the objects being
+    ///     compared. The return value has these meanings:
+    ///   </para>
+    ///   <list type="table">
+    ///     <listheader>
+    ///       <term>Value</term>
+    ///       <description>Meaning</description>
+    ///     </listheader>
+    ///     <item>
+    ///       <term>Less than zero</term>
+    ///       <description>This instance precedes <i>obj</i> in the sort
+    ///         order.</description>
+    ///     </item>
+    ///     <item>
+    ///       <term>Zero</term>
+    ///       <description>This instance occurs in the same position in
+    ///         the sort order as <i>obj</i>.</description>
+    ///     </item>
+    ///     <item>
+    ///       <term>Greater than zero</term>
+    ///       <description>This instance follows <i>obj</i> in the sort
+    ///         order.</description>
+    ///     </item>
+    ///   </list>
+    /// </returns>
+    /// <exception cref="Spring|EArgumentException">
+    ///   <i>obj</i> is not the same type as this instance.
+    /// </exception>
     function CompareTo(const obj: TObject): Integer;
   end;
+
   {$ENDREGION}
 
 
@@ -255,6 +315,42 @@ type
 {$ENDIF}
     class procedure CheckRange(condition: Boolean; const argumentName: string); overload; static; inline;
     class procedure CheckRange(length, index, count: Integer; indexBase: Integer = 0); overload; static; inline;
+
+    /// <summary>
+    ///   Checks an argument to ensure it is in the specified range including
+    ///   the bounds.
+    /// </summary>
+    /// <param name="value">
+    ///   The argument value to check.
+    /// </param>
+    /// <param name="min">
+    ///   The minimum allowed value for the argument.
+    /// </param>
+    /// <param name="max">
+    ///   The maximum allowed value for the argument.
+    /// </param>
+    /// <exception cref="EArgumentOutOfRangeException">
+    ///   The value is not within the specified range.
+    /// </exception>
+    class procedure CheckRangeInclusive(value, min, max: Integer); overload; static; inline;
+
+    /// <summary>
+    ///   Checks an argument to ensure it is in the specified range excluding
+    ///   the bounds.
+    /// </summary>
+    /// <param name="value">
+    ///   The argument value to check.
+    /// </param>
+    /// <param name="min">
+    ///   The minimum allowed value for the argument.
+    /// </param>
+    /// <param name="max">
+    ///   The maximum allowed value for the argument. <br />
+    /// </param>
+    /// <exception cref="EArgumentOutOfRangeException">
+    ///   The value is not within the specified range.
+    /// </exception>
+    class procedure CheckRangeExclusive(value, min, max: Integer); overload; static; inline;
 
     class procedure CheckTypeKind(typeInfo: PTypeInfo; expectedTypeKind: TTypeKind; const argumentName: string); overload; static;
     class procedure CheckTypeKind(typeInfo: PTypeInfo; expectedTypeKinds: TTypeKinds; const argumentName: string); overload; static;
@@ -1439,6 +1535,23 @@ class procedure Guard.CheckRange(const s: string; index, count: Integer);
 begin
   Guard.CheckRange(Length(s), index, count, 1);
 end;
+
+class procedure Guard.CheckRangeInclusive(value, min, max: Integer);
+const
+  ValueArgName = 'value';
+begin
+  if (value < min) or (value > max) then
+    Guard.RaiseArgumentOutOfRangeException(ValueArgName);
+end;
+
+class procedure Guard.CheckRangeExclusive(value, min, max: Integer);
+const
+  ValueArgName = 'value';
+begin
+  if (value <= min) or (value >= max) then
+    Guard.RaiseArgumentOutOfRangeException(ValueArgName);
+end;
+
 
 {$IFNDEF NEXTGEN}
 class procedure Guard.CheckRange(const s: WideString; index: Integer);
