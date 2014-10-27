@@ -6,7 +6,19 @@
   echo 5 dcu path:    %5
   echo 6 define:      %6
   echo 7 pause:       "%7"
-  call :do %1
+  :: clear some variables to allow build.exe to be run from Delphi XE (BDS 8.0) without forcing all Spring4D build to be initiated by XE (BDS 8.0)
+  :: set AQtime7_Product_Path=
+  :: set BDS=
+  :: set BDSAppDataBaseDir=
+  :: set BDSBIN=
+  :: set BDSINCLUDE=
+  set BDSLIB=
+  :: set BDSPROJECTSDIR=
+  :: set BDSUSERDIR=
+  :: set DELPHI=
+  :: set Platform=
+  :: set ProductVersion=
+  call :do call %1
 setlocal
   set DprojDirectory=%~dp2
   set DprojDirectory=%DprojDirectory:~0,-1%
@@ -21,6 +33,6 @@ endlocal
   goto :eof
 :do
   echo %*
-  echo %* >> %~dpn0.log
-  :: %*
+  :: you can also echo %* and pipe it to %~dpn0.log
+  %*
   goto :eof

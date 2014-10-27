@@ -245,7 +245,6 @@ end;
 procedure TfrmMain.chkRunTestsClick(Sender: TObject);
 begin
   fBuildEngine.RunTests := chkRunTests.Checked;
-  chkRunTestsAsConsole.Enabled := chkRunTests.Checked;
 end;
 
 procedure TfrmMain.chkDebugClick(Sender: TObject);

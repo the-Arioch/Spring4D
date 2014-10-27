@@ -515,6 +515,7 @@ begin
       Exit;
     end;
   end;
+  Result := TKnownPlatforms.Win32;
   Guard.RaiseArgumentException('targetPlatform');
 end;
 

@@ -387,7 +387,7 @@ object frmMain: TfrmMain
       Margins.Top = 4
       Margins.Right = 8
       Margins.Bottom = 4
-      OnClickCheck = lbTargetsClickCheck
+      OnClickCheck = TargetsListBoxClickCheck
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -404,7 +404,6 @@ object frmMain: TfrmMain
       ParentFont = False
       PopupMenu = TargetsPopupMenu
       TabOrder = 0
-      ExplicitHeight = 200
     end
   end
   object lblHomepage: TLinkLabel
@@ -419,7 +418,6 @@ object frmMain: TfrmMain
     TabOrder = 6
     UseVisualStyle = True
     OnLinkClick = lblHomepageLinkClick
-    ExplicitTop = 445
   end
   object grpBuildOptions: TGroupBox
     Left = 359
@@ -469,7 +467,6 @@ object frmMain: TfrmMain
       Height = 17
       Hint = 'Compile unit tests as console application'
       Caption = 'Console'
-      Enabled = False
       TabOrder = 3
       OnClick = chkRunTestsAsConsoleClick
     end
