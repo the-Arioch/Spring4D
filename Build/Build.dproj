@@ -65,7 +65,7 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="Source\BuildEngine.pas"/>
-        <None Include="..\BuildHelper.bat"/>
+        <None Include="BuildHelper.bat"/>
         <None Include="..\Clean.bat"/>
         <None Include="..\Build.Settings.Compilers.ini"/>
         <None Include="..\Build.Settings.ini"/>

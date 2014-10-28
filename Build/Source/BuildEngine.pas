@@ -717,7 +717,7 @@ begin
   begin
     if fRunTestsAsConsole then
       defines := 'CONSOLE_TESTRUNNER';
-    commandLine := Format('/C BuildHelper "%0:s" "%1:s" "Config=%2:s" "Platform=%3:s" "DCC_DcuOutput=%4:s" "DCC_Define=%5:s"', [
+    commandLine := Format('/C Build\BuildHelper "%0:s" "%1:s" "Config=%2:s" "Platform=%3:s" "DCC_DcuOutput=%4:s" "DCC_Define=%5:s"', [
       rsVars, projectName, configName, targetPlatform, unitOutputPath, defines]);
     if fPauseAfterEachStep then
       commandLine := commandLine + SPause;
