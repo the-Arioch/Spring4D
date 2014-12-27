@@ -38,7 +38,9 @@ type
   TComponentBuilder = class(TInterfacedObject, IComponentBuilder)
   private
     fKernel: IKernel;
+    fOnBuild: INotifyEvent<TComponentModel>;
     fInspectors: IList<IBuilderInspector>;
+    function GetOnBuild: INotifyEvent<TComponentModel>;
   public
     constructor Create(const kernel: IKernel);
 
@@ -47,6 +49,8 @@ type
     procedure ClearInspectors;
     procedure Build(const model: TComponentModel);
     procedure BuildAll;
+
+    property OnBuild: INotifyEvent<TComponentModel> read GetOnBuild;
   end;
 
   TInspectorBase = class abstract(TInterfacedObject, IBuilderInspector)
@@ -118,7 +122,7 @@ uses
   Spring.Container.Injection,
   Spring.Container.LifetimeManager,
   Spring.Container.ResourceStrings,
-  Spring.Helpers,
+  Spring.Events,
   Spring.Reflection;
 
 
@@ -130,6 +134,12 @@ begin
   inherited Create;
   fKernel := kernel;
   fInspectors := TCollections.CreateInterfaceList<IBuilderInspector>;
+  fOnBuild := TNotifyEventImpl<TComponentModel>.Create;
+end;
+
+function TComponentBuilder.GetOnBuild: INotifyEvent<TComponentModel>;
+begin
+  Result := fOnBuild;
 end;
 
 procedure TComponentBuilder.AddInspector(const inspector: IBuilderInspector);
@@ -155,6 +165,7 @@ var
 begin
   for inspector in fInspectors do
     inspector.ProcessModel(fKernel, model);
+  fOnBuild.Invoke(Self, model);
 end;
 
 procedure TComponentBuilder.BuildAll;
@@ -191,6 +202,7 @@ procedure TLifetimeInspector.DoProcessModel(const kernel: IKernel;
     LifetimeManagerClasses: array[TLifetimeType] of TLifetimeManagerClass = (
       nil,
       TSingletonLifetimeManager,
+      TTransientLifetimeManager,
       TTransientLifetimeManager,
       TSingletonPerThreadLifetimeManager,
       TPooledLifetimeManager,
@@ -481,7 +493,7 @@ begin
   begin
     attributes := model.ComponentType.GetCustomAttributes<ImplementsAttribute>;
     for attribute in attributes do
-      kernel.Registry.RegisterService(model, attribute.ServiceType, attribute.Name);
+      kernel.Registry.RegisterService(model, attribute.ServiceType, attribute.ServiceName);
 
     services := model.ComponentType.GetInterfaces.Where(
       function(const interfaceType: TRttiInterfaceType): Boolean

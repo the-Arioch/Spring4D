@@ -7,7 +7,7 @@
         <TargetedPlatforms>7</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>
-        <ProjectVersion>16.0</ProjectVersion>
+        <ProjectVersion>16.1</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
@@ -149,7 +149,6 @@
         <DCCReference Include="..\..\Source\Base\Logging\Spring.Logging.ResourceStrings.pas"/>
         <DCCReference Include="..\..\Source\Base\Logging\Spring.Logging.Serializers.pas"/>
         <DCCReference Include="..\..\Source\Base\Reflection\Spring.Reflection.pas"/>
-        <DCCReference Include="..\..\Source\Base\Reflection\Spring.Reflection.Activator.pas"/>
         <DCCReference Include="..\..\Source\Base\Reflection\Spring.Reflection.ValueConverters.pas"/>
         <DCCReference Include="..\..\Source\Base\Spring.ResourceStrings.pas"/>
         <DCCReference Include="..\..\Source\Base\Spring.SystemUtils.pas"/>

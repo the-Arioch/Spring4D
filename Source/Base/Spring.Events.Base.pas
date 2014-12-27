@@ -35,6 +35,8 @@ uses
   Spring;
 
 type
+  PMethod = ^TMethod;
+
   ///	<summary>
   ///	  Base class for multicast event implementation
   ///	</summary>
@@ -52,6 +54,7 @@ type
     function GetHandlers: TArray<TMethod>;
     function GetInvoke: TMethod;
     function GetIsEmpty: Boolean;
+    function GetIsInvokable: Boolean;
     function GetOnChanged: TNotifyEvent;
     procedure SetEnabled(const value: Boolean);
     procedure SetOnChanged(const value: TNotifyEvent);
@@ -81,7 +84,18 @@ type
     property OnChanged: TNotifyEvent read GetOnChanged write SetOnChanged;
   end;
 
+  TEventBase<T> = class(TEventBase, IEvent<T>)
+  private
+    function GetInvoke: T;
+    procedure Add(handler: T);
+    procedure Remove(handler: T);
+    procedure ForEach(const action: TAction<T>);
+  end;
+
 implementation
+
+uses
+  TypInfo;
 
 function IsValid(AObject: TObject): Boolean;
 {$IFDEF DELPHI2010}
@@ -113,6 +127,7 @@ end;
 destructor TEventBase.Destroy;
 begin
   fNotificationHandler.Free;
+  fNotificationHandler := nil;
   fHandlers.Free;
   fLock.Free;
   inherited;
@@ -177,7 +192,12 @@ end;
 
 function TEventBase.GetIsEmpty: Boolean;
 begin
-  Result := Count = 0;
+  Result := fHandlers.Count = 0;
+end;
+
+function TEventBase.GetIsInvokable: Boolean;
+begin
+  Result := fEnabled and (fHandlers.Count <> 0);
 end;
 
 function TEventBase.GetOnChanged: TNotifyEvent;
@@ -254,6 +274,46 @@ end;
 procedure TEventBase.SetOnChanged(const value: TNotifyEvent);
 begin
   fOnChanged := value;
+end;
+
+{$ENDREGION}
+
+
+{$REGION 'TEventBase<T>'}
+
+procedure TEventBase<T>.Add(handler: T);
+begin
+  if {$IFDEF DELPHIXE7_UP}System.GetTypeKind(T){$ELSE}GetTypeKind(TypeInfo(T)){$ENDIF} = tkInterface then
+    inherited Add(MethodReferenceToMethodPointer(handler))
+  else
+    inherited Add(PMethod(@handler)^);
+end;
+
+procedure TEventBase<T>.ForEach(const action: TAction<T>);
+var
+  handler: TMethod;
+begin
+  for handler in Handlers do
+    if {$IFDEF DELPHIXE7_UP}System.GetTypeKind(T){$ELSE}GetTypeKind(TypeInfo(T)){$ENDIF} = tkInterface then
+      TAction<IInterface>(action)(MethodPointerToMethodReference(handler))
+    else
+      TAction<TMethod>(action)(handler);
+end;
+
+function TEventBase<T>.GetInvoke: T;
+begin
+  if {$IFDEF DELPHIXE7_UP}System.GetTypeKind(T){$ELSE}GetTypeKind(TypeInfo(T)){$ENDIF} = tkInterface then
+    IInterface(PPointer(@Result)^) := MethodPointerToMethodReference(inherited Invoke)
+  else
+    PMethod(@Result)^ := inherited Invoke;
+end;
+
+procedure TEventBase<T>.Remove(handler: T);
+begin
+  if {$IFDEF DELPHIXE7_UP}System.GetTypeKind(T){$ELSE}GetTypeKind(TypeInfo(T)){$ENDIF} = tkInterface then
+    inherited Remove(MethodReferenceToMethodPointer(handler))
+  else
+    inherited Remove(PMethod(@handler)^);
 end;
 
 {$ENDREGION}

@@ -206,6 +206,10 @@ resourcestring
 implementation
 
 uses
+{$ifdef DELPHIXE_UP}
+{$else}
+  IdFTPCommon,
+{$endif DELPHIXE_UP}
   IniFiles,
   IOUtils,
   StrUtils,
@@ -220,6 +224,15 @@ const
     'Debug',
     'Release'
   );
+
+function IsRelativePath(const Path: string): Boolean;
+begin
+{$ifdef DELPHIXE_UP}
+  Result := TPath.IsRelativePath(Path);
+{$else}
+  Result := IndyIsRelativePath(Path);
+{$endif DELPHIXE_UP}
+end;
 
 procedure Log(const aLine: string); overload;
 begin
@@ -325,6 +338,7 @@ end;
 constructor TCompilerTarget.Create(const typeName: string; const properties: TStrings);
 var
   bdsFilePath: string;
+  BDSPath: string;
 begin
   Guard.CheckTrue(typeName <> '', 'typeName');
   Guard.CheckNotNull(properties, 'properties');
@@ -339,9 +353,10 @@ begin
 
   fTargetPlatform := properties.GetValueOrDefault('Platform', 'Win32');
   fKeys.BDS := properties.GetValueOrDefault('Keys.BDS', '');
-  fKeys.LibraryKey := IncludeTrailingPathDelimiter(fKeys.BDS) + properties.GetValueOrDefault('Keys.Library', 'Library');
-  fKeys.Globals := IncludeTrailingPathDelimiter(fKeys.BDS) + properties.GetValueOrDefault('Keys.Globals', 'Globals');
-  fKeys.EnvironmentVariables := IncludeTrailingPathDelimiter(fKeys.BDS) + properties.GetValueOrDefault('Keys.EnvironmentVariables', 'Environment Variables');
+  BDSPath := IncludeTrailingPathDelimiter(fKeys.BDS);
+  fKeys.LibraryKey := BDSPath + properties.GetValueOrDefault('Keys.Library', 'Library');
+  fKeys.Globals := BDSPath + properties.GetValueOrDefault('Keys.Globals', 'Globals');
+  fKeys.EnvironmentVariables := BDSPath + properties.GetValueOrDefault('Keys.EnvironmentVariables', 'Environment Variables');
   fNames.LibraryPath := properties.GetValueOrDefault('Names.LibraryPath', 'Search Path');
   fNames.BrowsingPath := properties.GetValueOrDefault('Names.BrowsingPath', 'Browsing Path');
   fNames.RootDir := properties.GetValueOrDefault('Names.RootDir', 'RootDir');
@@ -508,7 +523,7 @@ var
 begin
   for knownPlatform := Low(TKnownPlatforms) to High(TKnownPlatforms) do
   begin
-    knownPlatformName := TEnum.GetName(knownPlatform);
+    knownPlatformName := TEnum.GetName<TKnownPlatforms>(knownPlatform); // Delphi 2010 requires the <TKnownPlatforms>; Delphi XE+ doesn't need it.
     if SameText(knownPlatformName, targetPlatform) then
     begin
       Result := knownPlatform;
@@ -632,7 +647,7 @@ var
   processInfo: TProcessInformation;
   currentDir: PChar;
 begin
-  CommandLog.Add(Format('Executing "%s %s" in "%s"', [applicationName, commandLine, workingDir]));
+  CommandLog.Add(Format('Executing <<%s %s>> in "%s"', [applicationName, commandLine, workingDir]));
   if not DryRun then
   begin
     startupInfo := Default(TStartupInfo);
@@ -696,8 +711,8 @@ begin
   if buildConfig = TBuildConfig.Debug then
     RemoveRelatedEntries(projectPath, target.DebugDCUPaths);
 
-  if TPath.IsRelativePath(task.UnitOutputPath) then
-    unitOutputPath := { projectPath + } task.UnitOutputPath // see if msbuild can handle relative paths
+  if IsRelativePath(task.UnitOutputPath) then
+    unitOutputPath := { projectPath + } task.UnitOutputPath // TODO: see if msbuild can handle relative paths; if it works: remove the comment.
   else
     unitOutputPath := task.UnitOutputPath;
   unitOutputPath := StringReplace(unitOutputPath, '$(Config)', configName, [rfIgnoreCase, rfReplaceAll]);

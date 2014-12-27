@@ -32,6 +32,7 @@ uses
   Classes,
   Generics.Collections,
   Generics.Defaults,
+  SysUtils,
   Spring,
   Spring.Collections,
   Spring.Collections.Base;
@@ -95,10 +96,11 @@ type
     procedure SetItem(index: Integer; const value: T); override;
   {$ENDREGION}
 
-    function EnsureCapacity(value: Integer): Integer;
+    procedure EnsureCapacity(capacity: Integer); inline;
+    procedure Grow(capacity: Integer);
   public
     constructor Create; override;
-    constructor Create(const collection: array of T); override;
+    constructor Create(const values: array of T); override;
     constructor Create(const collection: IEnumerable<T>); override;
     destructor Destroy; override;
 
@@ -110,11 +112,15 @@ type
     function IndexOf(const item: T; index, count: Integer): Integer; override;
 
     procedure Insert(index: Integer; const item: T); override;
+    procedure InsertRange(index: Integer; const values: array of T); override;
+    procedure InsertRange(index: Integer; const collection: IEnumerable<T>); override;
 
     procedure Delete(index: Integer); override;
     procedure DeleteRange(index, count: Integer); override;
 
     function Extract(const item: T): T; override;
+
+    function GetRange(index, count: Integer): IList<T>; override;
 
     procedure Exchange(index1, index2: Integer); override;
     procedure Move(currentIndex, newIndex: Integer); override;
@@ -228,10 +234,31 @@ type
     procedure Move(currentIndex, newIndex: Integer); override;
   end;
 
+  TAnonymousReadOnlyList<T> = class(TEnumerableBase<T>, IReadOnlyList<T>)
+  private
+    fCount: TFunc<Integer>;
+    fItems: TFunc<Integer, T>;
+    fIterator: IEnumerable<T>;
+  protected
+  {$REGION 'Property Accessors'}
+    function GetItem(index: Integer): T;
+  {$ENDREGION}
+  public
+    constructor Create(const count: TFunc<Integer>;
+      const items: TFunc<Integer, T>;
+      const iterator: IEnumerable<T>{$IFDEF DELPHIXE3_UP} = nil{$ENDIF});
+
+    function GetEnumerator: IEnumerator<T>; override;
+
+    function IndexOf(const item: T): Integer; overload;
+    function IndexOf(const item: T; index: Integer): Integer; overload;
+    function IndexOf(const item: T; index, count: Integer): Integer; overload;
+  end;
+
 implementation
 
 uses
-  SysUtils,
+  Spring.Collections.Extensions,
   Spring.ResourceStrings;
 
 
@@ -270,17 +297,17 @@ begin
     fArrayManager := TMoveArrayManager<T>.Create;
 end;
 
-constructor TList<T>.Create(const collection: array of T);
+constructor TList<T>.Create(const values: array of T);
 var
   i: Integer;
 begin
   Create;
-  fCount := Length(collection);
+  fCount := Length(values);
   if fCount > 0 then
   begin
     SetLength(fItems, fCount);
-    for i := Low(collection) to High(collection) do
-      fItems[i] := collection[i];
+    for i := Low(values) to High(values) do
+      fItems[i] := values[i];
   end;
 end;
 
@@ -332,6 +359,49 @@ begin
   Result := fItems;
 end;
 
+function TList<T>.GetRange(index, count: Integer): IList<T>;
+var
+  list: TList<T>;
+{$IFNDEF DELPHIXE2_UP}
+  i: Integer;
+{$ENDIF}
+begin
+{$IFDEF SPRING_ENABLE_GUARD}
+  Guard.CheckRange((index >= 0) and (index < fCount), 'index');
+  Guard.CheckRange((count >= 0) and (count <= fCount - index), 'count');
+{$ENDIF}
+
+  list := TList<T>.Create;
+  list.fCount := count;
+{$IFDEF DELPHIXE2_UP}
+  list.fItems := Copy(fItems, index, count);
+{$ELSE}
+  SetLength(list.fItems, count);
+  for i := 0 to fCount - 1 do
+  begin
+    list.fItems[i] := fItems[index];
+    Inc(index);
+  end;
+{$ENDIF}
+  Result := list;
+end;
+
+procedure TList<T>.Grow(capacity: Integer);
+var
+  newCapacity: Integer;
+begin
+  newCapacity := Length(fItems);
+  if newCapacity = 0 then
+    newCapacity := capacity
+  else
+    repeat
+      newCapacity := newCapacity * 2;
+      if newCapacity < 0 then
+        OutOfMemoryError;
+    until newCapacity >= capacity;
+  SetCapacity(newCapacity);
+end;
+
 {$IFOPT Q+}{$DEFINE OVERFLOW_CHECKS_ON}{$Q-}{$ENDIF}
 procedure TList<T>.IncreaseVersion;
 begin
@@ -340,13 +410,14 @@ end;
 {$IFDEF OVERFLOW_CHECKS_ON}{$Q+}{$ENDIF}
 
 function TList<T>.IndexOf(const item: T; index, count: Integer): Integer;
+{$IFDEF DELPHI2010}
 var
   comparer: IEqualityComparer<T>;
   i: Integer;
 begin
 {$IFDEF SPRING_ENABLE_GUARD}
-  Guard.CheckRange((index >= 0) and (index <= Self.Count), 'index');
-  Guard.CheckRange((count >= 0) and (count <= Self.Count - index), 'count');
+  Guard.CheckRange((index >= 0) and (index <= fCount), 'index');
+  Guard.CheckRange((count >= 0) and (count <= fCount - index), 'count');
 {$ENDIF}
 
   comparer := EqualityComparer;
@@ -354,6 +425,10 @@ begin
     if comparer.Equals(fItems[i], item) then
       Exit(i);
   Result := -1;
+{$ELSE}
+begin
+  Result := TArray.IndexOf<T>(fItems, item, index, count, EqualityComparer);
+{$ENDIF}
 end;
 
 procedure TList<T>.SetItem(index: Integer; const value: T);
@@ -389,6 +464,71 @@ begin
   IncreaseVersion;
 
   Changed(item, caAdded);
+end;
+
+procedure TList<T>.InsertRange(index: Integer; const values: array of T);
+var
+  i: Integer;
+begin
+{$IFDEF SPRING_ENABLE_GUARD}
+  Guard.CheckRange((index >= 0) and (index <= fCount), 'index');
+{$ENDIF}
+
+  EnsureCapacity(fCount + Length(values));
+  if index <> fCount then
+  begin
+    fArrayManager.Move(fItems, index, index + Length(values), fCount - index);
+    fArrayManager.Finalize(fItems, index, Length(values));
+  end;
+
+  if not IsManaged{$IFDEF WEAKREF} and not HasWeakRef{$ENDIF} then
+    System.Move(values[0], fItems[index], Length(values) * SizeOf(T))
+  else
+    for i := Low(values) to High(values) do
+      fItems[index + i] := values[i];
+
+  Inc(fCount, Length(values));
+  IncreaseVersion;
+
+  for i := Low(values) to High(values) do
+    Changed(values[i], caAdded);
+end;
+
+procedure TList<T>.InsertRange(index: Integer;
+  const collection: IEnumerable<T>);
+var
+  list: TList<T>;
+  i: Integer;
+begin
+  if collection.AsObject is TList<T> then
+  begin
+{$IFDEF SPRING_ENABLE_GUARD}
+    Guard.CheckRange((index >= 0) and (index <= fCount), 'index');
+{$ENDIF}
+
+    list := TList<T>(collection.AsObject);
+
+    EnsureCapacity(fCount + Length(list.fItems));
+    if index <> fCount then
+    begin
+      fArrayManager.Move(fItems, index, index + Length(list.fItems), fCount - index);
+      fArrayManager.Finalize(fItems, index, Length(list.fItems));
+    end;
+
+    if not IsManaged{$IFDEF WEAKREF} and not HasWeakRef{$ENDIF} then
+      System.Move(list.fItems[0], fItems[index], list.fCount * SizeOf(T))
+    else
+      for i := Low(list.fItems) to list.fCount - 1 do
+        fItems[index + i] := list.fItems[i];
+
+    Inc(fCount, list.fCount);
+    IncreaseVersion;
+
+    for i := 0 to list.fCount - 1 do
+      Changed(list.fItems[i], caAdded);
+  end
+  else
+    inherited InsertRange(index, collection);
 end;
 
 procedure TList<T>.DeleteInternal(index: Integer;
@@ -479,24 +619,12 @@ begin
   Capacity := 0;
 end;
 
-function TList<T>.EnsureCapacity(value: Integer): Integer;
-var
-  newCapacity: Integer;
+procedure TList<T>.EnsureCapacity(capacity: Integer);
 begin
-  newCapacity := Length(fItems);
-  if newCapacity >= value then
-    Exit(newCapacity);
-
-  if newCapacity = 0 then
-    newCapacity := value
-  else
-    repeat
-      newCapacity := newCapacity * 2;
-      if newCapacity < 0 then
-        OutOfMemoryError;
-    until newCapacity >= value;
-  Capacity := newCapacity;
-  Result := newCapacity;
+  if capacity > Length(fItems) then
+    Grow(capacity)
+  else if capacity < 0 then
+    OutOfMemoryError;
 end;
 
 procedure TList<T>.Exchange(index1, index2: Integer);
@@ -549,8 +677,8 @@ end;
 
 procedure TList<T>.SetCapacity(value: Integer);
 begin
-  if value < Count then
-    DeleteRange(Count - value + 1, Count - value);
+  if value < fCount then
+    DeleteRange(value, fCount - value);
   SetLength(fItems, value);
 end;
 
@@ -759,7 +887,7 @@ end;
 
 function TSortedList<T>.Add(const item: T): Integer;
 begin
-  TArray.BinarySearch<T>(fItems, item, Result, Comparer, 0, Count);
+  TArray.BinarySearch<T>(fItems, item, Result, Comparer, 0, fCount);
   inherited Insert(Result, item);
 end;
 
@@ -767,7 +895,7 @@ function TSortedList<T>.Contains(const value: T): Boolean;
 var
   index: Integer;
 begin
-  Result := TArray.BinarySearch<T>(fItems, value, index, Comparer, 0, Count);
+  Result := TArray.BinarySearch<T>(fItems, value, index, Comparer, 0, fCount);
 end;
 
 procedure TSortedList<T>.Exchange(index1, index2: Integer);
@@ -778,8 +906,8 @@ end;
 function TSortedList<T>.IndexOf(const item: T; index, count: Integer): Integer;
 begin
 {$IFDEF SPRING_ENABLE_GUARD}
-  Guard.CheckRange((index >= 0) and (index <= Self.Count), 'index');
-  Guard.CheckRange((count >= 0) and (count <= Self.Count - index), 'count');
+  Guard.CheckRange((index >= 0) and (index <= fCount), 'index');
+  Guard.CheckRange((count >= 0) and (count <= fCount - index), 'count');
 {$ENDIF}
 
   TArray.BinarySearch<T>(fItems, item, Result, Comparer, index, count);
@@ -1042,6 +1170,56 @@ begin
 
   fIndex := 0;
   fCurrent := Default(T);
+end;
+
+{$ENDREGION}
+
+
+{$REGION 'TAnonymousReadOnlyList<T>'}
+
+constructor TAnonymousReadOnlyList<T>.Create(const count: TFunc<Integer>;
+  const items: TFunc<Integer, T>; const iterator: IEnumerable<T>);
+begin
+  inherited Create;
+  fCount := count;
+  fItems := items;
+  fIterator := iterator;
+  if not Assigned(fIterator) then
+    fIterator := TAnonymousIterator<T>.Create(fCount, fItems);
+end;
+
+function TAnonymousReadOnlyList<T>.GetEnumerator: IEnumerator<T>;
+begin
+  Result := fIterator.GetEnumerator;
+end;
+
+function TAnonymousReadOnlyList<T>.GetItem(index: Integer): T;
+begin
+  Result := fItems(index);
+end;
+
+function TAnonymousReadOnlyList<T>.IndexOf(const item: T): Integer;
+begin
+  Result := IndexOf(item, 0, Count)
+end;
+
+function TAnonymousReadOnlyList<T>.IndexOf(const item: T;
+  index: Integer): Integer;
+begin
+  Result := IndexOf(item, index, Count - index);
+end;
+
+function TAnonymousReadOnlyList<T>.IndexOf(const item: T; index,
+  count: Integer): Integer;
+var
+  comparer: IEqualityComparer<T>;
+  i: Integer;
+begin
+  comparer := EqualityComparer;
+  for i := index to index + count - 1 do
+    if comparer.Equals(fItems(i), item) then
+      Exit(i);
+  Result := -1;
 end;
 
 {$ENDREGION}

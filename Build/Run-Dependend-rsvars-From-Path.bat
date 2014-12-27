@@ -1,5 +1,5 @@
 @echo off
-  for %%v in (L Latest 5 6 7 8 9 10 11 12 13 14 15) do if /I !%1!==!%%v! goto :bds
+  for %%v in (L Latest 4 5 6 7 8 9 10 11 12 13 14 15) do if /I !%1!==!%%v! goto :bds
   if /I !%1!==!! goto :help
   echo Unknown BDS version "%1"
   goto :help
@@ -14,10 +14,16 @@
 :bdsBegin
   echo Parameters: "%*"
   setlocal
+  set bdsExe=
+  set bdsProduct=
+  set bdsReg=
+  set bdsTarget=
+  set bdsVersion=
   call :%1
   set bdsBatch=%0
   set bdsVersion=%1
   set bdsTarget=%2
+  echo registry: %bdsReg%
   echo product: %bdsProduct%
   echo BDS EXE: %bdsExe%
   if !!==!%bdsExe%! goto :noBdsExe
@@ -31,6 +37,8 @@
   for %%v in (F fixTargets B msbuild BR msbuildRelease) do if /I !%bdsTarget%!==!%%v! goto :performInit
   goto :skipInit
 :performInit
+  :: Delphi < 2007 have no msbuild support
+  if /I %bdsVersion% LEQ 5 goto :noMsBuildSupport
   :: Delphi 2007 has environment variables setup differently
   if not %bdsVersion%==5 call :initDelphiUnicode
   if %bdsVersion%==5 call :initDelphi2007
@@ -58,13 +66,16 @@
 :noBdsExe
   echo bds.exe does not exist
   goto :bdsEnd
+:noMsBuildSupport
+  echo BDS %bdsVersion%.0 (%bdsProduct%) does not have msbuild support
+  goto :bdsEnd
 :bdsEnd
   endlocal
   goto :eof
   
 :B
 :msbuild
-  :: TODO check if the project exists
+  :: check if the project exists
   call :do %msBuildExe% /target:build /p:DCC_BuildAllUnits=true /p:config=Debug %*
   goto :eof
 
@@ -89,20 +100,20 @@
 :D
 :Delphi
   call :FixEditorLineEndsTtr
-  call :do start "%bdsProduct%" %bdsExe% -pDelphi
+  call :do start "%bdsProduct%" %bdsExe% -pDelphi %*
   goto :eof
 
 :C
 :CBuilder
   call :FixEditorLineEndsTtr
-  call :do start "%bdsProduct%" %bdsExe% -pCBuilder
+  call :do start "%bdsProduct%" %bdsExe% -pCBuilder %*
   goto :eof
 
 :S
 :RS
 :RadStudio
   call :FixEditorLineEndsTtr
-  call :do start "%bdsProduct%" %bdsExe%
+  call :do start "%bdsProduct%" %bdsExe% %*
   goto :eof
 
 :FixEditorLineEndsTtr
@@ -120,25 +131,35 @@
   )
   goto :eof
 
-:getBdsExe
-  :: HKCU
-  FOR /F "tokens=2*" %%P IN ('REG QUERY HKEY_CURRENT_USER\Software\%1 /v App 2^>NUL') DO call :do set bdsExe="%%Q"
-  :: HKLM x86
-  if [%bdsExe%]==[] FOR /F "tokens=2*" %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\%1 /v App 2^>NUL') DO call :do set bdsExe="%%Q"
-  :: HKLM x64
-  if [%bdsExe%]==[] FOR /F "tokens=2*" %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\%1 /v App 2^>NUL') DO call :do set bdsExe="%%Q"
+:getBdsExeAndReg
+  if not [%bdsExe%]==[] goto :eof
+  FOR /F "tokens=2*" %%P IN ('REG QUERY %1\%2 /v App 2^>NUL') DO set bdsExe="%%Q"
+  if not [%bdsExe%]==[] set bdsReg=%1\%2
   goto :eof
 
+:getBdsExe
+  :: HKCU
+  call :getBdsExeAndReg HKEY_CURRENT_USER\Software %1
+  :: HKLM x86
+  call :getBdsExeAndReg HKEY_LOCAL_MACHINE\SOFTWARE %1
+  :: HKLM x64
+  call :getBdsExeAndReg HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node %1
+  goto :eof
+
+:4
+  call :getBdsExe Borland\BDS\4.0
+  set bdsProduct=RAD Studio 2006
+  goto :eof
 :5
   call :getBdsExe Borland\BDS\5.0
   set bdsProduct=RAD Studio 2007
   goto :eof
 :6
-  call :getBdsExe Embarcadero\BDS\6.0
+  call :getBdsExe CodeGear\BDS\6.0
   set bdsProduct=RAD Studio 2009
   goto :eof
 :7
-  call :getBdsExe Embarcadero\BDS\7.0
+  call :getBdsExe CodeGear\BDS\7.0
   set bdsProduct=RAD Studio 2010
   goto :eof
 :8
@@ -188,6 +209,7 @@
   if [%bdsExe%]==[] call :7
   if [%bdsExe%]==[] call :6
   if [%bdsExe%]==[] call :5
+  if [%bdsExe%]==[] call :4
   goto :eof
 
 :initDelphi2007
@@ -217,6 +239,7 @@
   set msBuildExe=%FrameworkDir%\msbuild.exe
   :: Defaults, then exception
   set requiredTargets=CodeGear.Common.Targets CodeGear.Cpp.Targets CodeGear.Delphi.Targets CodeGear.Deployment.Targets CodeGear.Group.Targets CodeGear.Idl.Targets CodeGear.Profiles.Targets
+  if %bdsVersion%==7 set requiredTargets=CodeGear.Common.Targets CodeGear.Cpp.Targets CodeGear.Delphi.Targets CodeGear.Group.Targets CodeGear.Idl.Targets
   if %bdsVersion%==8 set requiredTargets=CodeGear.Common.Targets CodeGear.Cpp.Targets CodeGear.Delphi.Targets CodeGear.Group.Targets CodeGear.Idl.Targets
   if %bdsVersion%==13 set requiredTargets=CodeGear.Common.Targets CodeGear.Cpp.Targets CodeGear.Delphi.Targets CodeGear.Deployment.Targets CodeGear.Group.Targets CodeGear.Profiles.Targets
   call :assertRequiredTargets
@@ -274,6 +297,7 @@
   echo     and `Target` is the BDS Target to optionally run after `rsvars.bat` has been run.
   echo.
   echo Supported BDS versions:
+  echo      4 - Delphi 2006 (does not support msbuild)
   echo      5 - Delphi 2007
   echo      6 - Delphi 2009
   echo      7 - Delphi 2010
