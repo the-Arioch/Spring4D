@@ -22,7 +22,7 @@
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_ExeOutput>Bin\Delphi2010\$(Platform)\$(Config)</DCC_ExeOutput>
 			<DCC_Define>SPRING_ENABLE_GUARD;$(DCC_Define)</DCC_Define>
-			<DCC_UnitSearchPath>..\Source;..\Source\Base;..\Source\Base\Collections;..\Source\Base\Logging;..\Source\Base\Reflection;..\Source\Core\Container;..\Source\Core\Logging;..\Source\Core\Services;..\Source\Extensions\Utils;..\Source\Extensions\Cryptography;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\Source;..\Source\Base;..\Source\Base\Collections;..\Source\Base\Logging;..\Source\Base\Reflection;..\Source\Core\Container;..\Source\Core\Logging;..\Source\Core\Services;..\Source\Extensions\Utils;..\Source\Extensions\Cryptography;Source\DUnitXML;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>Bin\Delphi2010\%Platform%\%Config%\Spring.Tests.exe</DCC_DependencyCheckOutputName>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;$(DCC_UnitAlias)</DCC_UnitAlias>
@@ -48,8 +48,6 @@
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="Source\Spring.TestBootstrap.pas"/>
-			<DCCReference Include="Source\VSoft.DUnit.XMLTestRunner.pas"/>
-			<DCCReference Include="Source\VSoft.MSXML6.pas"/>
 			<DCCReference Include="Source\Spring.TestRegistration.pas"/>
 			<DCCReference Include="Source\Spring.TestRunner.pas"/>
 			<DCCReference Include="Source\Spring.TestUtils.pas"/>
@@ -72,6 +70,7 @@
 			<DCCReference Include="Source\Core\Spring.Tests.Pool.pas"/>
 			<DCCReference Include="Source\Extensions\Spring.Tests.Cryptography.pas"/>
 			<DCCReference Include="Source\Extensions\Spring.Tests.Utils.pas"/>
+			<None Include="Spring.Tests.inc"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
