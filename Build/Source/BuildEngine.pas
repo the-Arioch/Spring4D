@@ -145,6 +145,7 @@ type
   private
     fDryRun: Boolean;
     fModifyDelphiRegistrySettings: Boolean;
+    fMsbuildVerbosity: string;
     fOnlyShowInstalledVersions: Boolean;
     fPauseAfterEachStep: Boolean;
     fRunTests: Boolean;
@@ -160,6 +161,8 @@ type
     property DryRun: Boolean read fDryRun write fDryRun;
     property ModifyDelphiRegistrySettings: Boolean
       read fModifyDelphiRegistrySettings write fModifyDelphiRegistrySettings;
+    property MsbuildVerbosity: string read fMsbuildVerbosity write
+        fMsbuildVerbosity;
     property OnlyShowInstalledVersions: Boolean
       read fOnlyShowInstalledVersions write fOnlyShowInstalledVersions;
     property PauseAfterEachStep: Boolean read FPauseAfterEachStep write FPauseAfterEachStep;
@@ -712,7 +715,7 @@ begin
     RemoveRelatedEntries(projectPath, target.DebugDCUPaths);
 
   if IsRelativePath(task.UnitOutputPath) then
-    unitOutputPath := { projectPath + } task.UnitOutputPath // TODO: see if msbuild can handle relative paths; if it works: remove the comment.
+    unitOutputPath := task.UnitOutputPath
   else
     unitOutputPath := task.UnitOutputPath;
   unitOutputPath := StringReplace(unitOutputPath, '$(Config)', configName, [rfIgnoreCase, rfReplaceAll]);
@@ -730,11 +733,11 @@ begin
   rsVars := IncludeTrailingPathDelimiter(target.RootDir) + 'bin\rsvars.bat';
   for projectName in task.Projects do
   begin
-    if fRunTestsAsConsole then
+    if RunTestsAsConsole then
       defines := 'CONSOLE_TESTRUNNER';
-    commandLine := Format('/C Build\BuildHelper "%0:s" "%1:s" "Config=%2:s" "Platform=%3:s" "DCC_DcuOutput=%4:s" "DCC_Define=%5:s"', [
-      rsVars, projectName, configName, targetPlatform, unitOutputPath, defines]);
-    if fPauseAfterEachStep then
+    commandLine := Format('/C Build\BuildHelper "%0:s" "%1:s" "Config=%2:s" "Platform=%3:s" "DCC_DcuOutput=%4:s" "DCC_Define=%5:s" %6:s', [
+      rsVars, projectName, configName, targetPlatform, unitOutputPath, defines, MsbuildVerbosity]);
+    if PauseAfterEachStep then
       commandLine := commandLine + SPause;
     ExecuteCommandLine(cmdFileName, commandLine, exitCode, projectPath);
     if exitCode <> 0 then
@@ -826,6 +829,7 @@ begin
       fSourcePaths[i] := IncludeTrailingPathDelimiter(fSourceBaseDir) + fSourcePaths[i];
     selectedTasks.DelimitedText := iniFile.ReadString('Globals', 'SelectedTasks', '');
     fDryRun := iniFile.ReadBool('Globals', 'DryRun', False);
+    fMsbuildVerbosity := iniFile.ReadString('Globals', 'MsbuildVerbosity', 'normal');
     fPauseAfterEachStep := iniFile.ReadBool('Globals', 'PauseAfterEachStep', False);
     fRunTests := iniFile.ReadBool('Globals', 'RunTests', False);
     fRunTestsAsConsole := iniFile.ReadBool('Globals', 'RunTestsAsConsole', False);
@@ -892,6 +896,7 @@ begin
     iniFile.WriteString('Globals', 'Config', config);
     iniFile.WriteString('Globals', 'SelectedTasks', selectedTasks.DelimitedText);
     iniFile.WriteBool('Globals', 'DryRun', fDryRun);
+    iniFile.WriteString('Globals', 'MsbuildVerbosity', fMsbuildVerbosity);
     iniFile.WriteBool('Globals', 'PauseAfterEachStep', fPauseAfterEachStep);
     iniFile.WriteBool('Globals', 'RunTests', fRunTests);
     iniFile.WriteBool('Globals', 'RunTestsAsConsole', fRunTestsAsConsole);

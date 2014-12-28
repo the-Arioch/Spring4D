@@ -349,9 +349,9 @@ object frmMain: TfrmMain
     Caption = '&Details:'
   end
   object btnBuild: TButton
-    Left = 359
-    Top = 241
-    Width = 146
+    Left = 435
+    Top = 240
+    Width = 70
     Height = 25
     Anchors = [akLeft, akTop, akRight]
     Caption = '&Build'
@@ -423,13 +423,20 @@ object frmMain: TfrmMain
     Left = 359
     Top = 78
     Width = 146
-    Height = 115
+    Height = 156
     Anchors = [akLeft, akTop, akRight]
     Caption = 'Build options'
     TabOrder = 2
     DesignSize = (
       146
-      115)
+      156)
+    object Label1: TLabel
+      Left = 9
+      Top = 113
+      Width = 87
+      Height = 13
+      Caption = '&msbuild verbosity:'
+    end
     object chkRunTests: TCheckBox
       Left = 9
       Top = 21
@@ -480,11 +487,28 @@ object frmMain: TfrmMain
       TabOrder = 4
       OnClick = chkDryRunClick
     end
+    object msbuildVerbosityComboBox: TComboBox
+      Left = 24
+      Top = 129
+      Width = 113
+      Height = 21
+      Style = csDropDownList
+      ItemIndex = 2
+      TabOrder = 5
+      Text = 'normal'
+      OnChange = msbuildVerbosityComboBoxChange
+      Items.Strings = (
+        'quiet'
+        'minimal'
+        'normal'
+        'detailed'
+        'diagnostic')
+    end
   end
   object btnClean: TButton
     Left = 359
-    Top = 210
-    Width = 146
+    Top = 240
+    Width = 70
     Height = 25
     Anchors = [akLeft, akTop, akRight]
     Caption = '&Clean'

@@ -60,6 +60,8 @@ type
     CheckOnlyNonMobilePlatforms: TMenuItem;
     CheckOnlyOSXMenuItem: TMenuItem;
     CheckOnlyWindowsMenuItem: TMenuItem;
+    Label1: TLabel;
+    msbuildVerbosityComboBox: TComboBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnBuildClick(Sender: TObject);
@@ -81,6 +83,7 @@ type
     procedure CheckOnlyNonMobilePlatformsClick(Sender: TObject);
     procedure CheckOnlyOSXMenuItemClick(Sender: TObject);
     procedure CheckOnlyWindowsMenuItemClick(Sender: TObject);
+    procedure msbuildVerbosityComboBoxChange(Sender: TObject);
   protected
     procedure SyncBuildTasksFromTargetsListBox; virtual;
     procedure CheckOnlyTargetsListBoxBy(const CompilerFunction: TFunc<TCompilerTarget, Boolean>); virtual;
@@ -123,6 +126,7 @@ begin
   chkRunTests.Checked := fBuildEngine.RunTests;
   chkRunTestsAsConsole.Checked := fBuildEngine.RunTestsAsConsole;
   chkModifyDelphiRegistrySettings.Checked := fBuildEngine.ModifyDelphiRegistrySettings;
+  msbuildVerbosityComboBox.ItemIndex := msbuildVerbosityComboBox.Items.IndexOf(fBuildEngine.MsbuildVerbosity);
 
   TargetsListBox.Clear;
   for task in fBuildEngine.Tasks do
@@ -277,6 +281,11 @@ begin
     Result := not compiler.IsMobilePlatform;
   end
   );
+end;
+
+procedure TfrmMain.msbuildVerbosityComboBoxChange(Sender: TObject);
+begin
+  fBuildEngine.MsbuildVerbosity := msbuildVerbosityComboBox.Text;
 end;
 
 procedure TfrmMain.SyncBuildTasksFromTargetsListBox;
