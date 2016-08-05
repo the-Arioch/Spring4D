@@ -103,9 +103,9 @@ type
     fInvocations: TMethodInvocations;
     fTypeInfo: PTypeInfo;
     function Cast(const handler): TMethod;
-    procedure InternalInvoke(Params: Pointer; StackSize: Integer);
     procedure Invoke;
   protected
+    procedure InternalInvoke(Params: Pointer; StackSize: Integer); virtual;
     procedure Notify(Sender: TObject; const Item: TMethod;
       Action: TCollectionNotification); override;
   public
