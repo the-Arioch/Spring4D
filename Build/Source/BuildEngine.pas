@@ -2,7 +2,7 @@
 {                                                                           }
 {           Spring Framework for Delphi                                     }
 {                                                                           }
-{           Copyright (c) 2009-2014 Spring4D Team                           }
+{           Copyright (c) 2009-2018 Spring4D Team                           }
 {                                                                           }
 {           http://www.spring4d.org                                         }
 {                                                                           }
@@ -195,11 +195,14 @@ type
     Win32,
     Win64,
     OSX32,
+    OSX64,
     iOSSimulator,
     iOSDevice,
     iOSDevice32,
     iOSDevice64,
-    Android
+    Android,
+    Android64,
+    Linux64
   );
 
 const
@@ -335,7 +338,7 @@ begin
   fNames.RootDir := properties.GetValueOrDefault('Names.RootDir', 'RootDir');
   fNames.DebugDCUPath := properties.GetValueOrDefault('Names.DebugDCUPath', 'Debug DCU Path');
 
-  fExists := fRegistry.KeyExists(fKeys.BDS);
+  fExists := fRegistry.KeyExists(fKeys.LibraryKey);
   if fExists then
   begin
     EnsureOpenKey(fKeys.BDS);
@@ -454,12 +457,14 @@ const // luckily, the compiler file names have not changed over the Delphi versi
     'dcc32.exe',
     'dcc64.exe',
     'dccosx.exe',
+    'dccosx64.exe',
     'dccios32.exe',
     'dcciosarm.exe',
     'dcciosarm.exe',
     'dcciosarm64.exe',
-    'dccaarm.exe'
-  );
+    'dccaarm.exe',
+    'dccaarm64.exe',
+    'dcclinux64.exe'  );
 var
   knownPlatform: TKnownPlatforms;
   knownPlatformName: string;
@@ -749,7 +754,8 @@ begin
     fSourceBaseDir := ApplicationPath + fSourceBaseDir;
     fSourcePaths.DelimitedText := iniFile.ReadString('Globals', 'SourcePaths', '');
     for i := 0 to fSourcePaths.Count - 1 do
-      fSourcePaths[i] := IncludeTrailingPathDelimiter(fSourceBaseDir) + fSourcePaths[i];
+      fSourcePaths[i] := ExcludeTrailingPathDelimiter(
+        IncludeTrailingPathDelimiter(fSourceBaseDir) + fSourcePaths[i]);
     selectedTasks.DelimitedText := iniFile.ReadString('Globals', 'SelectedTasks', '');
     fPauseAfterEachStep := iniFile.ReadBool('Globals', 'PauseAfterEachStep', False);
     fRunTests := iniFile.ReadBool('Globals', 'RunTests', False);

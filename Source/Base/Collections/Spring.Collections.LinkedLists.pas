@@ -2,7 +2,7 @@
 {                                                                           }
 {           Spring Framework for Delphi                                     }
 {                                                                           }
-{           Copyright (c) 2009-2014 Spring4D Team                           }
+{           Copyright (c) 2009-2018 Spring4D Team                           }
 {                                                                           }
 {           http://www.spring4d.org                                         }
 {                                                                           }
@@ -22,6 +22,8 @@
 {                                                                           }
 {***************************************************************************}
 
+{$I Spring.inc}
+
 unit Spring.Collections.LinkedLists;
 
 interface
@@ -34,21 +36,21 @@ uses
 
 type
 
-  {$REGION 'Documentation'}
   /// <summary>
   ///   Represents a doubly linked list.
   /// </summary>
   /// <typeparam name="T">
   ///   Specifies the element type of the linked list.
   /// </typeparam>
-  {$ENDREGION}
-  TLinkedList<T> = class(TCollectionBase<T>, ILinkedList<T>)
+  TLinkedList<T> = class(TCollectionBase<T>, ILinkedList<T>,
+    INotifyCollectionChanged<T>)
   private
     type
       TEnumerator = class(TEnumeratorBase<T>)
       private
         fList: TLinkedList<T>;
         fVersion: Integer;
+        {$IFDEF AUTOREFCOUNT}[Unsafe]{$ENDIF}
         fNode: TLinkedListNode<T>;
         fCurrent: T;
       protected
@@ -57,14 +59,20 @@ type
         constructor Create(const list: TLinkedList<T>);
         destructor Destroy; override;
         function MoveNext: Boolean; override;
-        procedure Reset; override;
       end;
   private
+    // ARC notes: It is assumed that once a node enters some list it belongs to
+    //            some list until freed and cannot be operated independently.
+    //            Based on this premise, its reference count is incremented as
+    //            soon as it enters some list and is kept like that until
+    //            cleared, at this point all nodes are disoposed of and their
+    //            refcount decremented. All handling inside the list may be
+    //            refcounting-free.
+    {$IFDEF AUTOREFCOUNT}[Unsafe]{$ENDIF}
     fFirstFree: TLinkedListNode<T>;
     fCount: Integer;
     fVersion: Integer;
     function EnsureNode(const value: T): TLinkedListNode<T>;
-    procedure IncreaseVersion; inline;
     procedure InternalInsertNodeBefore(const node: TLinkedListNode<T>;
       const newNode: TLinkedListNode<T>);
     procedure InternalInsertNodeToEmptyList(const newNode: TLinkedListNode<T>);
@@ -73,6 +81,7 @@ type
     procedure ValidateNewNode(const node: TLinkedListNode<T>);
     procedure ValidateNode(const node: TLinkedListNode<T>);
   protected
+    {$IFDEF AUTOREFCOUNT}[Unsafe]{$ENDIF}
     fHead: TLinkedListNode<T>;
   {$REGION 'Property Accessors'}
     function GetCount: Integer; override;
@@ -216,6 +225,7 @@ begin
   SetLength(oldItems, fCount);
   i := 0;
 
+  IncUnchecked(fVersion);
   node1 := fHead;
   while Assigned(node1) do
   begin
@@ -224,7 +234,12 @@ begin
 
     node2 := node1;
     node1 := node1.Next;
+{$IFNDEF AUTOREFCOUNT}
     node2.Free;
+{$ELSE}
+    node2.DisposeOf;
+    node2.__ObjRelease;
+{$ENDIF}
   end;
   fHead := nil;
   fCount := 0;
@@ -233,9 +248,13 @@ begin
   begin
     node1 := fFirstFree;
     fFirstFree := fFirstFree.fNext;
+{$IFNDEF AUTOREFCOUNT}
     node1.Free;
+{$ELSE}
+    node1.DisposeOf;
+    node1.__ObjRelease;
+{$ENDIF}
   end;
-  IncreaseVersion;
 
   for i := Low(oldItems) to High(oldItems) do
     Changed(oldItems[i], caRemoved);
@@ -244,7 +263,13 @@ end;
 function TLinkedList<T>.EnsureNode(const value: T): TLinkedListNode<T>;
 begin
   if not Assigned(fFirstFree) then
-    Result := TLinkedListNode<T>.Create(value)
+  begin
+    Result := TLinkedListNode<T>.Create(value);
+{$IFDEF AUTOREFCOUNT}
+    Result.fOwned := True;
+    Result.__ObjAddRef;
+{$ENDIF}
+  end
   else
   begin
     Result := fFirstFree;
@@ -270,14 +295,12 @@ end;
 function TLinkedList<T>.Find(const value: T): TLinkedListNode<T>;
 var
   node: TLinkedListNode<T>;
-  comparer: IEqualityComparer<T>;
 begin
   Result := nil;
   node := fHead;
-  comparer := EqualityComparer;
   if Assigned(node) then
   begin
-    while not comparer.Equals(node.fItem, value) do
+    while not Equals(node.fItem, value) do
     begin
       node := node.fNext;
       if node = fHead then
@@ -290,16 +313,14 @@ end;
 function TLinkedList<T>.FindLast(const value: T): TLinkedListNode<T>;
 var
   node1, node2: TLinkedListNode<T>;
-  comparer: IEqualityComparer<T>;
 begin
   if not Assigned(fHead) then
     Exit(nil);
   node1 := fHead.fPrev;
   node2 := node1;
-  comparer := EqualityComparer;
   if Assigned(node2) then
   begin
-    while not comparer.Equals(node2.fItem, value) do
+    while not Equals(node2.fItem, value) do
     begin
       node2 := node2.fPrev;
       if node2 = node1 then
@@ -345,22 +366,15 @@ begin
   Result := fOnChanged;
 end;
 
-{$IFOPT Q+}{$DEFINE OVERFLOW_CHECKS_ON}{$Q-}{$ENDIF}
-procedure TLinkedList<T>.IncreaseVersion;
-begin
-  Inc(fVersion);
-end;
-{$IFDEF OVERFLOW_CHECKS_ON}{$Q+}{$ENDIF}
-
 procedure TLinkedList<T>.InternalInsertNodeBefore(
   const node: TLinkedListNode<T>; const newNode: TLinkedListNode<T>);
 begin
+  IncUnchecked(fVersion);
   newNode.fList := Self;
   newNode.fNext := node;
   newNode.fPrev := node.fPrev;
   node.fPrev.fNext := newNode;
   node.fPrev := newNode;
-  IncreaseVersion;
   Inc(fCount);
   Changed(newNode.Value, caAdded);
 end;
@@ -368,11 +382,11 @@ end;
 procedure TLinkedList<T>.InternalInsertNodeToEmptyList(
   const newNode: TLinkedListNode<T>);
 begin
+  IncUnchecked(fVersion);
   newNode.fList := Self;
   newNode.fNext := newNode;
   newNode.fPrev := newNode;
   fHead := newNode;
-  IncreaseVersion;
   Inc(fCount);
   Changed(newNode.Value, caAdded);
 end;
@@ -381,6 +395,7 @@ procedure TLinkedList<T>.InternalRemoveNode(const node: TLinkedListNode<T>);
 var
   item: T;
 begin
+  IncUnchecked(fVersion);
   item := node.Value;
   if node.fNext = node then
     fHead := nil
@@ -393,7 +408,6 @@ begin
   end;
   InvalidateNode(node);
   Dec(fCount);
-  IncreaseVersion;
   Changed(item, caRemoved);
 end;
 
@@ -452,6 +466,17 @@ begin
 
   if Assigned(node.fList) then
     raise EInvalidOperationException.CreateRes(@SLinkedListNodeIsAttached);
+
+{$IFDEF AUTOREFCOUNT}
+{$IFDEF SPRING_ENABLE_GUARD}
+  Guard.CheckFalse(node.Disposed, 'node.Disposed');
+{$ENDIF}
+  if not node.fOwned then
+  begin
+    node.fOwned := True;
+    node.__ObjAddRef;
+  end;
+{$ENDIF}
 end;
 
 procedure TLinkedList<T>.ValidateNode(const node: TLinkedListNode<T>);
@@ -481,7 +506,7 @@ end;
 destructor TLinkedList<T>.TEnumerator.Destroy;
 begin
   fList._Release;
-  inherited;
+  inherited Destroy;
 end;
 
 function TLinkedList<T>.TEnumerator.GetCurrent: T;
@@ -502,15 +527,6 @@ begin
     fNode := fNode.Next;
     Result := True;
   end;
-end;
-
-procedure TLinkedList<T>.TEnumerator.Reset;
-begin
-  if fVersion <> fList.fVersion then
-    raise EInvalidOperationException.CreateRes(@SEnumFailedVersion);
-
-  fCurrent := Default(T);
-  fNode := fList.fHead;
 end;
 
 {$ENDREGION}

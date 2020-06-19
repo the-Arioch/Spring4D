@@ -2,7 +2,7 @@
 {                                                                           }
 {           Spring Framework for Delphi                                     }
 {                                                                           }
-{           Copyright (c) 2009-2014 Spring4D Team                           }
+{           Copyright (c) 2009-2018 Spring4D Team                           }
 {                                                                           }
 {           http://www.spring4d.org                                         }
 {                                                                           }
@@ -22,9 +22,9 @@
 {                                                                           }
 {***************************************************************************}
 
-unit Spring.Collections.Enumerable;
-
 {$I Spring.inc}
+
+unit Spring.Collections.Enumerable;
 
 interface
 
@@ -1360,8 +1360,12 @@ begin
 end;
 
 function Enumerable<TSource>.DefaultIfEmpty: IEnumerable<TSource>;
+var
+  defaultItem: TSource;
 begin
-  Result := DefaultIfEmpty(Default(TSource));
+  // workaround for RSP-20683
+  defaultItem := Default(TSource);
+  Result := DefaultIfEmpty(defaultItem);
 end;
 
 function Enumerable<TSource>.DefaultIfEmpty(const defaultValue: TSource): IEnumerable<TSource>;

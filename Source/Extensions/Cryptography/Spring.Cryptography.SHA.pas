@@ -2,7 +2,7 @@
 {                                                                           }
 {           Spring Framework for Delphi                                     }
 {                                                                           }
-{           Copyright (c) 2009-2014 Spring4D Team                           }
+{           Copyright (c) 2009-2018 Spring4D Team                           }
 {                                                                           }
 {           http://www.spring4d.org                                         }
 {                                                                           }
@@ -22,9 +22,10 @@
 {                                                                           }
 {***************************************************************************}
 
+{$I Spring.inc}
+
 unit Spring.Cryptography.SHA;
 
-{$I Spring.inc}
 {$R-,Q-}
 
 interface
@@ -59,9 +60,9 @@ type
     buf: array[0..127] of Byte;
   end;
 
-  ///	<summary>
-  ///	  SHA1 Hash
-  ///	</summary>
+  /// <summary>
+  ///   SHA1 Hash
+  /// </summary>
   TSHA1 = class(THashAlgorithmBase, ISHA1)
   private
     const fCHashSize = 20 * 8;  // 160 bits
@@ -74,9 +75,9 @@ type
     function HashFinal: TBuffer; override;
   end;
 
-  ///	<summary>
-  ///	  SHA256 Hash
-  ///	</summary>
+  /// <summary>
+  ///   SHA256 Hash
+  /// </summary>
   TSHA256 = class(THashAlgorithmBase, ISHA256)
   private
     const fCHashSize = 32 * 8;  // 256 bits
@@ -89,9 +90,9 @@ type
     function HashFinal: TBuffer; override;
   end;
 
-  ///	<summary>
-  ///	  SHA384 Hash
-  ///	</summary>
+  /// <summary>
+  ///   SHA384 Hash
+  /// </summary>
   TSHA384 = class(THashAlgorithmBase, ISHA384)
   private
     const fCHashSize = 48 * 8;  // 384 bits
@@ -104,9 +105,9 @@ type
     function HashFinal: TBuffer; override;
   end;
 
-  ///	<summary>
-  ///	  SHA512 Hash
-  ///	</summary>
+  /// <summary>
+  ///   SHA512 Hash
+  /// </summary>
   TSHA512 = class(THashAlgorithmBase, ISHA512)
   private
     const fCHashSize = 64 * 8;  // 512 bits
@@ -141,7 +142,7 @@ uses
   Spring.Cryptography.Utils;
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TSHA1'}{$ENDIF}
+{$REGION 'TSHA1'}
 
 function TSHA1.GetHashSize: Integer;
 begin
@@ -163,10 +164,10 @@ begin
   Result := SHA256Final(fContext, 1);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TSHA256'}{$ENDIF}
+{$REGION 'TSHA256'}
 
 function TSHA256.GetHashSize: Integer;
 begin
@@ -188,10 +189,10 @@ begin
   Result := SHA256Final(fContext, 256);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TSHA384'}{$ENDIF}
+{$REGION 'TSHA384'}
 
 function TSHA384.GetHashSize: Integer;
 begin
@@ -213,10 +214,10 @@ begin
   Result := SHA512Final(fContext, 384);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TSHA512'}{$ENDIF}
+{$REGION 'TSHA512'}
 
 function TSHA512.GetHashSize: Integer;
 begin
@@ -238,10 +239,10 @@ begin
   Result := SHA512Final(fContext, 512);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'Internal data and functions'}{$ENDIF}
+{$REGION 'Internal data and functions'}
 
 const
   cnstK256: array[0..63] of UInt32 =
@@ -290,22 +291,22 @@ end;
 
 function Sigma0(x: UInt64): UInt64;
 begin
-  Result := (ror64(x, 28) xor ror64(x, 34) xor ror64(x, 39));
+  Result := (RotateRight64(x, 28) xor RotateRight64(x, 34) xor RotateRight64(x, 39));
 end;
 
 function Sigma1(x: UInt64): UInt64;
 begin
-  Result := (ror64(x, 14) xor ror64(x, 18) xor ror64(x, 41));
+  Result := (RotateRight64(x, 14) xor RotateRight64(x, 18) xor RotateRight64(x, 41));
 end;
 
 function Gamma0(x: UInt64): UInt64;
 begin
-  Result := (ror64(x, 1) xor ror64(x, 8) xor (x shr 7));
+  Result := (RotateRight64(x, 1) xor RotateRight64(x, 8) xor (x shr 7));
 end;
 
 function Gamma1(x: UInt64): UInt64;
 begin
-  Result := (ror64(x, 19) xor ror64(x, 61) xor (x shr 6));
+  Result := (RotateRight64(x, 19) xor RotateRight64(x, 61) xor (x shr 6));
 end;
 
 function Ch256(x, y, z: UInt32): UInt32; assembler;
@@ -342,22 +343,22 @@ end;
 
 function E0256(x: UInt32): UInt32;
 begin
-  Result := ror(x, 2) xor ror(x, 13) xor ror(x, 22);
+  Result := RotateRight32(x, 2) xor RotateRight32(x, 13) xor RotateRight32(x, 22);
 end;
 
 function E1256(x: UInt32): UInt32;
 begin
-  Result := ror(x, 6) xor ror(x, 11) xor ror(x, 25);
+  Result := RotateRight32(x, 6) xor RotateRight32(x, 11) xor RotateRight32(x, 25);
 end;
 
 function F0256(x: UInt32): UInt32;
 begin
-  Result := ror(x, 7) xor ror(x, 18) xor (x shr 3);
+  Result := RotateRight32(x, 7) xor RotateRight32(x, 18) xor (x shr 3);
 end;
 
 function F1256(x: UInt32): UInt32;
 begin
-  Result := ror(x, 17) xor ror(x, 19) xor (x shr 10);
+  Result := RotateRight32(x, 17) xor RotateRight32(x, 19) xor (x shr 10);
 end;
 
 function ft1(t: Byte; x, y, z: UInt32): UInt32;
@@ -426,15 +427,15 @@ var
 begin
   Move(md.state, S, SizeOf(S));
   for i := 0 to 15 do
-    W[i] := Endian(PUInt32(@md.buf)[i]);
+    W[i] := ByteSwap32(PUInt32(@md.buf)[i]);
   for i := 16 to 79 do
-    W[i] := rol(W[i - 3] xor W[i - 8] xor W[i - 14] xor W[i - 16], 1);
+    W[i] := RotateLeft32(W[i - 3] xor W[i - 8] xor W[i - 14] xor W[i - 16], 1);
     for i := 0 to 79 do
     begin
-      t := rol(S[0], 5) + ft1(i, S[1], S[2], S[3]) + S[4] + Kt1(i) + W[i];
+      t := RotateLeft32(S[0], 5) + ft1(i, S[1], S[2], S[3]) + S[4] + Kt1(i) + W[i];
       S[4] := S[3];
       S[3] := S[2];
-      S[2] := rol(S[1], 30);
+      S[2] := RotateLeft32(S[1], 30);
       S[1] := S[0];
       S[0] := t;
     end;
@@ -451,7 +452,7 @@ var
 begin
   Move(md.state, S, SizeOf(S));
   for i := 0 to 15 do
-    W[i] := Endian(PUInt32(@md.buf)[i]);
+    W[i] := ByteSwap32(PUInt32(@md.buf)[i]);
   for i := 16 to 63 do
     W[i] := F1256(W[i - 2]) + W[i - 7] + F0256(W[i - 15]) + W[i - 16];
   for i := 0 to 63 do
@@ -480,7 +481,7 @@ var
 begin
   Move(md.state, S, 64);
   for i := 0 to 15 do
-    W[i] := Endian64(PInt64(UInt32(@md.buf) + i * 8)^);
+    W[i] := ByteSwap64(PUInt64(UInt32(@md.buf) + i * 8)^);
   for i := 16 to 79 do
     W[i] := Gamma1(W[i - 2]) + W[i - 7] + Gamma0(W [i - 15]) + W[i - 16];
   for i := 0 to 79 do
@@ -500,10 +501,10 @@ begin
     Inc(md.state[i], S[i]);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'SHA1'}{$ENDIF}
+{$REGION 'SHA1'}
 
 procedure SHA1Init(var md: TSHA256Ctx);
 begin
@@ -515,10 +516,10 @@ begin
   md.state[4] := $c3d2e1f0;
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'SHA256'}{$ENDIF}
+{$REGION 'SHA256'}
 
 function SHA256Final(var md: TSHA256Ctx; sz: Word): TBuffer;
 var
@@ -527,7 +528,7 @@ begin
   Inc(md.length, md.curlen shl 3);
   md.buf[md.curlen] := $80;
   Inc(md.curlen);
-  if (md.curlen >= 56) then
+  if (md.curlen > 56) then
   begin
     while md.curlen < 64 do
     begin
@@ -557,7 +558,7 @@ begin
 
 
   for i := 0 to 7 do
-    md.state[i] := endian(md.state[i]);
+    md.state[i] := ByteSwap32(md.state[i]);
 
   if sz = 256 then
     Result := TBuffer.Create(@(md.state[0]), SizeOf(UInt32) * 8)
@@ -598,10 +599,10 @@ begin
   end;
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'SHA384'}{$ENDIF}
+{$REGION 'SHA384'}
 
 procedure SHA384Init(var md: TSHA512Ctx);
 begin
@@ -616,10 +617,10 @@ begin
   md.state[7] := $47b5481dbefa4fa4;
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'SHA512'}{$ENDIF}
+{$REGION 'SHA512'}
 
 function SHA512Final(var md: TSHA512Ctx; sz: Word): TBuffer;
 var
@@ -628,7 +629,7 @@ begin
   Inc(md.length, md.curlen shl 3);
   md.buf[md.curlen] := $80;
   Inc(md.curlen);
-  if (md.curlen >= 112) then
+  if (md.curlen > 112) then
   begin
     while md.curlen < 128 do
     begin
@@ -650,7 +651,7 @@ begin
   sha512_compress(md);
 
   for i := 0 to 7 do
-    md.state[i] := endian64(md.state[i]);
+    md.state[i] := ByteSwap64(md.state[i]);
 
   if sz = 384 then
     Result := TBuffer.Create(@(md.state[0]), SizeOf(UInt64) * 6)
@@ -688,6 +689,7 @@ begin
   end;
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
+
 
 end.

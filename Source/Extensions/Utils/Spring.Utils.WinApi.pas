@@ -2,7 +2,7 @@
 {                                                                           }
 {           Spring Framework for Delphi                                     }
 {                                                                           }
-{           Copyright (c) 2009-2014 Spring4D Team                           }
+{           Copyright (c) 2009-2018 Spring4D Team                           }
 {                                                                           }
 {           http://www.spring4d.org                                         }
 {                                                                           }
@@ -22,18 +22,19 @@
 {                                                                           }
 {***************************************************************************}
 
-///	<summary>
-///	  Declares some Windows API for the framework.
-///	</summary>
-unit Spring.Utils.WinAPI; // platform;
-
 {$I Spring.inc}
+
+/// <summary>
+///   Declares some Windows API for the framework.
+/// </summary>
+unit Spring.Utils.WinAPI; // platform;
 
 interface
 
 {$IFDEF MSWINDOWS}
 uses
-  Windows, WinSvc;
+  Windows,
+  WinSvc;
 
 const
   VER_NT_WORKSTATION       = $0000001;
@@ -80,7 +81,7 @@ const
   {$EXTERNALSYM VER_SUITE_COMPUTE_SERVER}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'IP Types'}{$ENDIF}
+{$REGION 'IP Types'}
 
 const
   iphlpapilib = 'iphlpapi.dll';
@@ -162,10 +163,10 @@ type
 
 function GetAdaptersInfo(pAdapterInfo: PIP_ADAPTER_INFO; var pOutBufLen: ULONG): DWORD; stdcall;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'Service Control'}{$ENDIF}
+{$REGION 'Service Control'}
 
 const
 
@@ -331,7 +332,8 @@ function EnumServicesStatusEx(hSCManager: SC_HANDLE; InfoLevel: SC_ENUM_TYPE;
   pszGroupName: LPCTSTR): BOOL; stdcall;
 {$EXTERNALSYM EnumServicesStatusEx}
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
+
 
 function ConvertSidToStringSid(sid: PSID; var stringSid: LPWSTR): BOOL; stdcall;
 {$ENDIF}

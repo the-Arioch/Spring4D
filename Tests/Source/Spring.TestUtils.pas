@@ -2,7 +2,7 @@
 {                                                                           }
 {           Spring Framework for Delphi                                     }
 {                                                                           }
-{           Copyright (c) 2009-2014 Spring4D Team                           }
+{           Copyright (c) 2009-2018 Spring4D Team                           }
 {                                                                           }
 {           http://www.spring4d.org                                         }
 {                                                                           }
@@ -29,61 +29,44 @@ unit Spring.TestUtils;
 interface
 
 uses
-  Classes,
-  IniFiles,
   SysUtils,
   TestFramework;
 
 type
   TAbstractTestHelper = class helper for TAbstractTest
-  public
-    procedure CheckException(expected: ExceptionClass; method: TProc; const msg: string = '');
-  end;
-
-  TTestDecorator = class(TAbstractTest)
   private
-    fTest: ITest;
-    fTests: IInterfaceList;
+    function GetExpectedException: ExceptionClass; inline;
   protected
-    procedure RunTest(ATestResult: TTestResult); override;
+  {$IFNDEF DELPHIXE2_UP}
+    procedure CheckEquals(expected, actual: UInt64; msg: string = ''); overload;
+  {$ENDIF}
   public
-    constructor Create(const ATest: ITest; const AName: string = '');
-
-    function CountEnabledTestCases: Integer; override;
-    function CountTestCases: Integer; override;
-
-    function GetName: string; override;
-    function Tests: IInterfaceList; override;
-
-    procedure LoadConfiguration(const iniFile: TCustomIniFile; const section: string); override;
-    procedure SaveConfiguration(const iniFile: TCustomIniFile; const section: string); override;
-
-    property Test: ITest read fTest;
+    procedure CheckEqualsString(const expected, actual: string; msg: string = '');
+    procedure CheckException(expected: ExceptionClass; const method: TProc; const msg: string = '');
+    procedure Pass; inline;
+    function RegisterExpectedMemoryLeak(p: Pointer): Boolean; inline;
+    procedure StartExpectingException(e: ExceptionClass);
+    property ExpectedException: ExceptionClass
+      read GetExpectedException write StartExpectingException;
   end;
 
-  TRepeatedTest = class(TTestDecorator)
+  TTestCase<T: class, constructor> = class(TTestCase)
+  private type
+    TInterfacedObjectAccess = class(TInterfacedObject);
   private
-    fCount: Integer;
+    fSUT: T;
+  strict protected
+    property SUT: T read fSUT;
   protected
-    procedure RunTest(ATestResult: TTestResult); override;
-  public
-    constructor Create(const ATest: ITest; ACount: Integer; const AName: string = '');
-    function GetName: string; override;
-
-    function CountEnabledTestCases: Integer; override;
-    function CountTestCases: Integer; override;
+    procedure SetUp; override;
+    procedure TearDown; override;
   end;
-
-procedure ProcessTestResult(const ATestResult: TTestResult);
 
 implementation
 
-procedure ProcessTestResult(const ATestResult: TTestResult);
-begin
-{$IFNDEF AUTOREFCOUNT}
-  ATestResult.Free;
-{$ENDIF}
-end;
+uses
+  Math,
+  StrUtils;
 
 {$IFNDEF DELPHIXE2_UP}
 function ReturnAddress: Pointer; inline;
@@ -92,10 +75,47 @@ begin
 end;
 {$ENDIF}
 
+
 {$REGION 'TAbstractTestHelper'}
 
-procedure TAbstractTestHelper.CheckException(
-  expected: ExceptionClass; method: TProc; const msg: string);
+{$IFNDEF DELPHIXE2_UP}
+procedure TAbstractTestHelper.CheckEquals(expected, actual: UInt64; msg: string);
+begin
+  FCheckCalled := True;
+  if expected <> actual then
+    FailNotEquals(UIntToStr(expected), UIntToStr(actual), msg, ReturnAddress);
+end;
+{$ENDIF}
+
+procedure TAbstractTestHelper.CheckEqualsString(const expected, actual: string; msg: string); //FI:O801
+
+  procedure EqualsFail(index: Integer); overload;
+  const
+    ContextCharCount = 20;
+  begin
+    if (msg <> '') and not EndsText(sLineBreak, msg) then
+      msg := msg + sLineBreak;
+    msg := msg +
+      'Strings differ at position ' + IntToStr(index) + sLineBreak +
+      'Expected: ' + ReplaceStr(Copy(expected, Max(1, index - ContextCharCount), ContextCharCount * 2), sLineBreak, '  ') + sLineBreak +
+      'But was:  ' + ReplaceStr(Copy(actual, Max(1, index - ContextCharCount), ContextCharCount * 2), sLineBreak, '  ') + sLineBreak +
+      '----------' + DupeString('-', Min(ContextCharCount, index - 1)) + '^';
+    Fail(msg);
+  end;
+
+var
+  i: Integer;
+begin
+  FCheckCalled := True;
+  for i := 1 to Min(Length(expected), Length(actual)) do
+    if expected[i] <> actual[i] then
+      EqualsFail(i);
+  if Length(expected) <> Length(actual) then
+    EqualsFail(Min(Length(expected), Length(actual)) + 1);
+end;
+
+procedure TAbstractTestHelper.CheckException(expected: ExceptionClass;
+  const method: TProc; const msg: string);
 begin
   FCheckCalled := True;
   try
@@ -115,117 +135,64 @@ begin
     FailNotEquals(expected.ClassName, 'nothing', msg, ReturnAddress);
 end;
 
-{$ENDREGION}
-
-
-{$REGION 'TTestDecorator'}
-
-constructor TTestDecorator.Create(const ATest: ITest; const AName: string);
+function TAbstractTestHelper.GetExpectedException: ExceptionClass;
 begin
-  if AName = '' then
-    inherited Create(ATest.Name)
-  else
-    inherited Create(AName);
-  fTest := ATest;
-  fTests := TInterfaceList.Create;
-  fTests.Add(fTest);
+  Result := FExpectedException;
 end;
 
-function TTestDecorator.GetName: string;
+procedure TAbstractTestHelper.Pass;
 begin
-  Result := fTest.Name;
+  FCheckCalled := True;
 end;
 
-function TTestDecorator.CountEnabledTestCases: Integer;
-begin
-  if Enabled then
-    Result := fTest.CountEnabledTestCases
-  else
-    Result := 0;
-end;
-
-function TTestDecorator.CountTestCases: Integer;
-begin
-  if Enabled then
-    Result := fTest.CountTestCases
-  else
-    Result := 0;
-end;
-
-procedure TTestDecorator.RunTest(ATestResult: TTestResult);
-begin
-  fTest.RunWithFixture(ATestResult);
-end;
-
-function TTestDecorator.Tests: IInterfaceList;
-begin
-  Result := fTests;
-end;
-
-procedure TTestDecorator.LoadConfiguration(const iniFile: TCustomIniFile;
-  const section: string);
+function TAbstractTestHelper.RegisterExpectedMemoryLeak(p: Pointer): Boolean;
+{$IFNDEF MSWINDOWS}
 var
-  i: Integer;
+  memMgrEx: TMemoryManagerEx;
+{$ENDIF}
 begin
-  inherited LoadConfiguration(iniFile, section);
-  for i := 0 to fTests.Count - 1 do
-    ITest(fTests[i]).LoadConfiguration(iniFile, section + '.' + Name);
+{$IFDEF MSWINDOWS}
+  Result := System.RegisterExpectedMemoryLeak(p);
+{$ELSE}
+  GetMemoryManager(memMgrEx);
+  if Assigned(memMgrEx.RegisterExpectedMemoryLeak) then
+    Result := memMgrEx.RegisterExpectedMemoryLeak(p)
+  else
+    Result := False;
+{$ENDIF}
 end;
 
-procedure TTestDecorator.SaveConfiguration(const iniFile: TCustomIniFile;
-  const section: string);
-var
-  i: integer;
+procedure TAbstractTestHelper.StartExpectingException(e: ExceptionClass);
 begin
-  inherited SaveConfiguration(iniFile, section);
-  for i := 0 to fTests.Count - 1 do
-    ITest(fTests[i]).SaveConfiguration(iniFile, section + '.' + Name);
+  StopExpectingException;
+  FExpectedException := e;
+  FCheckCalled := True;
 end;
 
 {$ENDREGION}
 
 
-{$REGION 'TRepeatedTest'}
+{$REGION 'TTestCase<T>'}
 
-constructor TRepeatedTest.Create(const ATest: ITest; ACount: Integer;
-  const AName: string);
+procedure TTestCase<T>.SetUp;
 begin
-  inherited Create(ATest, AName);
-  fCount := ACount;
+  inherited SetUp;
+  fSUT := T.Create;
+{$IFNDEF AUTOREFCOUNT}
+  if fSUT.InheritsFrom(TInterfacedObject) then
+    TInterfacedObjectAccess(fSUT)._AddRef;
+{$ENDIF}
 end;
 
-function TRepeatedTest.CountEnabledTestCases: Integer;
+procedure TTestCase<T>.TearDown;
 begin
-  Result := inherited CountEnabledTestCases * fCount;
-end;
-
-function TRepeatedTest.CountTestCases: Integer;
-begin
-  Result := inherited CountTestCases * fCount;
-end;
-
-function TRepeatedTest.GetName: string;
-begin
-  Result := Format('%d x %s', [fCount, Test.Name]);
-end;
-
-procedure TRepeatedTest.RunTest(ATestResult: TTestResult);
-var
-  i: Integer;
-  errorCount: Integer;
-  failureCount: integer;
-begin
-  errorCount := ATestResult.ErrorCount;
-  failureCount := ATestResult.FailureCount;
-
-  for i := 0 to fCount - 1 do
-  begin
-    if ATestResult.ShouldStop
-      or (ATestResult.ErrorCount > errorCount)
-      or (ATestResult.FailureCount > failureCount) then
-      Break;
-    inherited RunTest(ATestResult);
-  end;
+{$IFNDEF AUTOREFCOUNT}
+  if fSUT.InheritsFrom(TInterfacedObject) then
+    TInterfacedObjectAccess(fSUT)._Release
+  else
+{$ENDIF}
+    fSUT.Free;
+  inherited TearDown;
 end;
 
 {$ENDREGION}

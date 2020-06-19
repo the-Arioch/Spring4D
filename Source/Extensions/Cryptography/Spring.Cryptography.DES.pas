@@ -2,7 +2,7 @@
 {                                                                           }
 {           Spring Framework for Delphi                                     }
 {                                                                           }
-{           Copyright (c) 2009-2014 Spring4D Team                           }
+{           Copyright (c) 2009-2018 Spring4D Team                           }
 {                                                                           }
 {           http://www.spring4d.org                                         }
 {                                                                           }
@@ -22,9 +22,10 @@
 {                                                                           }
 {***************************************************************************}
 
+{$I Spring.inc}
+
 unit Spring.Cryptography.DES;
 
-{$I Spring.inc}
 {$R-}
 
 interface
@@ -37,9 +38,9 @@ uses
   Spring.ResourceStrings;
 
 type
-  ///	<summary>
-  ///	  Data Encryption Standard (DES)
-  ///	</summary>
+  /// <summary>
+  ///   Data Encryption Standard (DES)
+  /// </summary>
   TDES = class(TSymmetricAlgorithmBase, IDES)
   private
     const
@@ -52,9 +53,9 @@ type
     constructor Create;
   end;
 
-  ///	<summary>
-  ///	  Triple Data Encryption Standard Algorithm
-  ///	</summary>
+  /// <summary>
+  ///   Triple Data Encryption Standard Algorithm
+  /// </summary>
   TTripleDES = class(TSymmetricAlgorithmBase, ITripleDES)
   private
     const
@@ -299,7 +300,7 @@ procedure cycleMove(var inData: array of Byte; bitMove: Byte);
 var
   i: Integer;
 begin
-  for i := 0 to bitMove - 1 do
+  for i := 0 to bitMove - 1 do //FI:W528
   begin
     inData[0] := (inData[0] shl 1) or (inData[1] shr 7);
     inData[1] := (inData[1] shl 1) or (inData[2] shr 7);
@@ -424,7 +425,7 @@ begin
 end;
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TDES'}{$ENDIF}
+{$REGION 'TDES'}
 
 constructor TDES.Create;
 begin
@@ -445,10 +446,10 @@ begin
   DecryptData(Key.AsBytes, inputBuffer, outputBuffer);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TTripleDES'}{$ENDIF}
+{$REGION 'TTripleDES'}
 
 constructor TTripleDES.Create;
 begin
@@ -497,6 +498,7 @@ begin
     raise ECryptographicException.CreateResFmt(@SIllegalKeySize, [value.Size]);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
+
 
 end.

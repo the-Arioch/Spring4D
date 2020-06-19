@@ -7,6 +7,7 @@ del /f /q /s *.~*
 del /f /q /s *.ficfg
 del /f /q /s *.local
 del /f /q /s *.identcache
+del /f /q /s *.orig
 del /f /q /s *.stat
 del /f /q /s *.tvsconfig
 
@@ -21,6 +22,9 @@ del /f /q /s Logs\*.*
 del /f /q /s Samples\*.exe
 del /f /q /s Tests\Bin\*.*
 del /f /q /s Tests\Lib\*.*
+
+rmdir Library /s /q
+rmdir Logs /s /q
 
 for /f "tokens=* delims=" %%i in ('dir /s /b /a:d __history') do (
   rd /s /q "%%i"

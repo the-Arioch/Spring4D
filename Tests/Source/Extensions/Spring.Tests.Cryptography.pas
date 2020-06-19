@@ -2,7 +2,7 @@
 {                                                                           }
 {           Spring Framework for Delphi                                     }
 {                                                                           }
-{           Copyright (c) 2009-2014 Spring4D Team                           }
+{           Copyright (c) 2009-2018 Spring4D Team                           }
 {                                                                           }
 {           http://www.spring4d.org                                         }
 {                                                                           }
@@ -48,8 +48,7 @@ type
   protected
     const
       fCData: UnicodeString = 'Delphi Spring Framework';  // fCDefaultDataString
-      fBytesAbc : array[0..2] of Byte = (Byte('a'), Byte('b'), Byte('c'));
-
+      fBytesAbc: array[0..2] of Byte = (Byte('a'), Byte('b'), Byte('c'));
   protected
     fActual: TBuffer;
     fExpected: TBuffer;
@@ -362,7 +361,7 @@ begin
 end;
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TTestMD5'}{$ENDIF}
+{$REGION 'TTestMD5'}
 
 procedure TTestMD5.SetUp;
 begin
@@ -404,7 +403,7 @@ begin
   end;
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
 { TTestSHA1 }
@@ -520,7 +519,7 @@ begin
 end;
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TTestDES'}{$ENDIF}
+{$REGION 'TTestDES'}
 
 procedure TTestDES.SetUp;
 begin
@@ -604,10 +603,10 @@ begin
   CheckEquals(fInputBuffer, fActualBuffer);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TTestTripleDES'}{$ENDIF}
+{$REGION 'TTestTripleDES'}
 
 procedure TTestTripleDES.SetUp;
 begin
@@ -652,10 +651,10 @@ begin
   CheckEquals(fExpectedBuffer, fActualBuffer, 'Encryption');
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{ TMockSymmetricAlgorithm }
+{$REGION 'TMockSymmetricAlgorithm'}
 
 procedure TMockSymmetricAlgorithm.DoEncryptBlock(const inputBuffer: TBytes;
   var outputBuffer: TBytes);
@@ -671,7 +670,10 @@ begin
   Move(inputBuffer[0], outputBuffer[0], Length(inputBuffer));
 end;
 
-{ TTestSymmetricAlgorithmBase }
+{$ENDREGION}
+
+
+{$REGION 'TTestSymmetricAlgorithmBase'}
 
 procedure TTestSymmetricAlgorithmBase.SetUp;
 begin
@@ -704,7 +706,10 @@ begin
   CheckResult(TBuffer.Empty, TBuffer.Empty);
 end;
 
-{ TTestPaddingModeIsNone }
+{$ENDREGION}
+
+
+{$REGION 'TTestPaddingModeIsNone'}
 
 procedure TTestPaddingModeIsNone.SetUp;
 begin
@@ -732,7 +737,10 @@ begin
   fOutputBuffer := fAlgorithm.Encrypt(fInputBuffer);
 end;
 
-{ TTestPaddingModeIsPKCS7 }
+{$ENDREGION}
+
+
+{$REGION 'TTestPaddingModeIsPKCS7'}
 
 procedure TTestPaddingModeIsPKCS7.SetUp;
 begin
@@ -773,7 +781,10 @@ begin
   CheckResult(fInputBuffer, fOutputBuffer);
 end;
 
-{ TTestPaddingModeIsZeros }
+{$ENDREGION}
+
+
+{$REGION 'TTestPaddingModeIsZeros' }
 
 procedure TTestPaddingModeIsZeros.SetUp;
 begin
@@ -814,7 +825,10 @@ begin
   CheckResult(fInputBuffer, fOutputBuffer);
 end;
 
-{ TTestPaddingModeIsANSIX923 }
+{$ENDREGION}
+
+
+{$REGION 'TTestPaddingModeIsANSIX923'}
 
 procedure TTestPaddingModeIsANSIX923.SetUp;
 begin
@@ -855,7 +869,10 @@ begin
   CheckResult(fInputBuffer, fOutputBuffer);
 end;
 
-{ TTestPaddingModeIsISO10126 }
+{$ENDREGION}
+
+
+{$REGION 'TTestPaddingModeIsISO10126'}
 
 procedure TTestPaddingModeIsISO10126.SetUp;
 begin
@@ -901,5 +918,8 @@ begin
   CheckEquals(16, fActualBuffer.Size);
   CheckEquals($07, fActualBuffer.Last);
 end;
+
+{$ENDREGION}
+
 
 end.

@@ -2,7 +2,7 @@
 {                                                                           }
 {           Spring Framework for Delphi                                     }
 {                                                                           }
-{           Copyright (c) 2009-2014 Spring4D Team                           }
+{           Copyright (c) 2009-2018 Spring4D Team                           }
 {                                                                           }
 {           http://www.spring4d.org                                         }
 {                                                                           }
@@ -22,9 +22,9 @@
 {                                                                           }
 {***************************************************************************}
 
-unit Spring.Cryptography.CRC;
-
 {$I Spring.inc}
+
+unit Spring.Cryptography.CRC;
 
 interface
 
@@ -36,9 +36,9 @@ uses
   Spring.Cryptography.Base;
 
 type
-  ///	<summary>
-  ///	  CRC16 Hash (CheckSum)
-  ///	</summary>
+  /// <summary>
+  ///   CRC16 Hash (CheckSum)
+  /// </summary>
   TCRC16 = class(THashAlgorithmBase, ICRC16)
   private
     const fCHashSize = 2 * 8;  // 16 bits
@@ -54,9 +54,9 @@ type
     property CrcValue: UInt16 read GetCrcValue;
   end;
 
-  ///	<summary>
-  ///	  CRC32 Hash (CheckSum)
-  ///	</summary>
+  /// <summary>
+  ///   CRC32 Hash (CheckSum)
+  /// </summary>
   TCRC32 = class(THashAlgorithmBase, ICRC32)
   private
     const fCHashSize = 4 * 8;  // 32 bits
@@ -88,7 +88,7 @@ uses
 
 const
   //This polynomial ( 0xEDB88320L) DOES generate the same CRC values as ZMODEM and PKZIP
-  crc32_table_b: array[0..255] of UInt32 =
+  crc32_table_b: array[0..255] of UInt32 = //FI:O803
   (
     $00000000, $77073096, $EE0E612C, $990951BA, $076DC419,
     $706AF48F, $E963A535, $9E6495A3, $0EDB8832, $79DCB8A4,
@@ -146,7 +146,8 @@ const
 
 
   //This polynomial ($04c11db7) is used at: AUTODIN II, Ethernet, & FDDI
-  crc32_table: array[0..255] of UInt32 = (
+  crc32_table: array[0..255] of UInt32 = //FI:O803
+  (
     $00000000, $04c11db7, $09823b6e, $0d4326d9,
     $130476dc, $17c56b6b, $1a864db2, $1e475005,
     $2608edb8, $22c9f00f, $2f8ad6d6, $2b4bcb61,
@@ -375,7 +376,7 @@ var
   i: Integer;
 begin
   p := buffer;
-  for i := 1 to len do
+  for i := 1 to len do //FI:W528
   begin
     crc := Hi(crc) xor Crc16_Table[p^ xor Lo(crc)];
     Inc(p);
@@ -388,7 +389,7 @@ begin
 end;
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TCRC16'}{$ENDIF}
+{$REGION 'TCRC16'}
 
 function TCRC16.GetCrcValue: UInt16;
 begin
@@ -415,10 +416,10 @@ begin
   Result := CRC16Final(fCRCValue);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
 
 
-{$IFDEF SUPPORTS_REGION}{$REGION 'TCRC32'}{$ENDIF}
+{$REGION 'TCRC32'}
 
 function TCRC32.GetCrcValue: UInt32;
 begin
@@ -445,6 +446,7 @@ begin
   Result := CRC32Final(fCRCValue);
 end;
 
-{$IFDEF SUPPORTS_REGION}{$ENDREGION}{$ENDIF}
+{$ENDREGION}
+
 
 end.
