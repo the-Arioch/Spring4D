@@ -67,7 +67,7 @@ uses
 {$IFDEF TESTINSIGHT}
   TestInsight.DUnit;
 {$ELSE}
-  {$IFDEF DELPHI2010}
+  {$IFDEF DELPHI2010_UP}
   GUITestRunner;
   {$ELSE}
   {$IFDEF MSWINDOWS}
@@ -197,7 +197,7 @@ begin
   ReportMemoryLeaksOnShutdown := True;
 {$ELSE}
   {$IFDEF MSWINDOWS}
-  {$IFDEF DELPHI2010}
+  {$IFDEF DELPHI2010_UP}
   GUITestRunner.RunRegisteredTests;
   {$ELSE}
   if ParamCount > 0 then
