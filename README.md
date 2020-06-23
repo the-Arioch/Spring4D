@@ -2,7 +2,7 @@ Upstream repo: https://bitbucket.org/sglienke/spring4d
 
 Differences:
 
-1. mostly last official stable 1.1.4 (Stefan says the bleeding edge 2 alpha 2 is de facto more stable, though)
+1. mostly last official stable 1.1.4 (Stefan says the bleeding edge 2 alpha 2 is de facto more stable for Delphi 10.x, though)
 
 2. added demo for "auto clock-cursor events" for building GUI, using some Deltics code too, [bug 52](https://bitbucket.org/sglienke/spring4d/issues/52/).
 
