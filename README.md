@@ -1,3 +1,15 @@
+Upstream repo: https://github.com/the-Arioch/Spring4D
+
+Differences:
+
+1. mostly last official stable 1.1.4 (Stefan says the bleeding edge 2 alpha 2 is de facto more stable, though)
+
+2. added demo for "auto clock-cursor events" for building GUI, using some Deltics code too, [bug 52](https://bitbucket.org/sglienke/spring4d/issues/52/).
+
+3. fixed [bug 338](https://bitbucket.org/sglienke/spring4d/issues/338) - the stock installer does tells developer intallation was OPK when unit tests failed. Due to a typo in GUI calling code. Stefan, sadly, says "not a bug".
+
+-----------
+
 ![Spring4D medium.png](https://bitbucket.org/repo/jxX7Lj/images/3496466100-Spring4D%20medium.png)
 
 
