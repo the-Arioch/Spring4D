@@ -1,4 +1,4 @@
-Upstream repo: https://github.com/the-Arioch/Spring4D
+Upstream repo: https://bitbucket.org/sglienke/spring4d
 
 Differences:
 
