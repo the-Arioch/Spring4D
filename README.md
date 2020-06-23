@@ -6,7 +6,7 @@ Differences:
 
 2. added demo for "auto clock-cursor events" for building GUI, using some Deltics code too, [bug 52](https://bitbucket.org/sglienke/spring4d/issues/52/).
 
-3. fixed [bug 338](https://bitbucket.org/sglienke/spring4d/issues/338) - the stock installer does tells developer intallation was OPK when unit tests failed. Due to a typo in GUI calling code. Stefan, sadly, says "not a bug".
+3. fixed [bug 338](https://bitbucket.org/sglienke/spring4d/issues/338) - the stock installer tells a developer intallation was OK when unit tests failed. Due to a typo in GUI calling code. Stefan, sadly, says "not a bug".
 
 -----------
 
